@@ -1,15 +1,38 @@
 # Actividad 3. Análisis de un conjunto de datos de origen biológico mediante técnicas de machine learning supervisadas y no supervisadas
 
+## Introducción
+
+El presente análisis se centra en un dataset que recopila información sobre la expresión de cientos de genes en muestras asociadas a cinco tipos distintos de cáncer:
+
+* AGH
+* CHC
+* HPB
+* CGC
+* CFB           
+
+El objetivo principal es implementar de forma razonada técnicas de aprendizaje supervisado y no supervisados para detectar patrones intrínsecos en el conjunto de datos y evaluar la capacidad de estos métodos para distinguir e identificar los distintos tipos de cáncer en base a los distintos perfiles de expresión génica.
+
 ## Entorno
 
+En primer lugar, se cargaron las siguientes librerías para poder llevar a cabo el análisis:
+
 ```{r}
-library(tidyverse)
-library(skimr)
+# Manipulación, importación, exploración y visualización de datos
+library(tidyverse) 
+library(skimr) 
+
+# Graficos
+library(ggplot2)
+
+# Métodos de aprendizaje no supervisados
+
+# Métodos de aprendizaje supervisados
+
 ```
 
 ## Procesamiento de los datos 
 
-Creacion del dataframe:
+Se importaron los tres archivos provistos y se generó un único dataframe.
 
 ```{r}
 classes <- read_delim("classes.csv", delim = ";", escape_double = FALSE,  col_names = FALSE, trim_ws = TRUE)
@@ -20,19 +43,21 @@ gene_exp[] <- lapply(gene_exp, as.numeric)
 column_names <- read.table("column_names.txt", quote="\"", comment.char="")
 
 colnames(gene_exp) <- column_names[[1]]
+
 df <- cbind(classes, gene_exp)
 colnames(df)[1:2] <- c("sample", "class")
 df$class <- factor(df$class)
 df <- as.data.frame(df)
 ```
 
-Confirmo que no hay NA
+Tras una inspección inicial del conjunto de datos, se confirmó la ausencia de valores perdidos (NA) en todas las variables:
 
 ```{r}
 which(is.na(df))
 ```
+Por lo tanto, no fue necesario aplicar ningún método de imputación.
 
-Revisión del df
+Luego, se utilizó la librería skim para realizar una rápida exploración de los datos, incluyendo el calculo de estadísticos descriptivos:
 
 ```{r}
 skim_sd0 <- skim_df %>%
@@ -41,18 +66,41 @@ skim_sd0 <- skim_df %>%
   head()
 ```
 
-Vemos que hay 3 genes con sd 0 y los eliminamos:
+Se identificaron 3 genes con desviación estándar igual a cero (sd = 0), es decir, genes cuya expresión es constante en todas las muestras. Estos genes fueron eliminados del análisis, ya que no aportan información discriminativa y pueden causar problemas numéricos en métodos como PCA, LDA o clustering.
 
 ```{r}
 genes_sd0 <- c("RPL22L1", "ZCCHC12", "MIER3")
 
 df_filter <- df %>%
   select(-all_of(genes_sd0))   # elimina los genes con solo 0
+```
 
+Finalmente, los datos de expresión génica fueron escalados a media cero y varianza unitaria:
+
+```{r}
 df_scaled <- df_filter %>%
   select(-sample, -class) %>%   # solo expresión génica
-  scale()                        # escala a media 0 y varianza 1
+  scale()                       # escala a media 0 y varianza 1
 ```
+## Métodos no supervisados 
+
+### Técnicas de reducción de dimensionalidad
+
+Se implementaron y evaluaron cuatro métodos de aprendizaje no supervisado de reducción de dimensionalidad: PCA, isomap, LLE y t-SNE.
+
+•	PCA → Carla
+•	Isomap → Anna
+•	LLE → Valeria
+•	t-SNE → Judit
+
+
+
+Como puede observarse en el análisis anterior, la mejor separación de los tipos de cáncer se obtuvo con t-SNE, seguido de LLE.
+
+### Técnicas de clusterización
+k-means -> Ana
+•	Jerarquico → Carla
+
 HEATMAP
 Hacemos un heatmap para ver la expresion de los genes
 ```{r}
@@ -158,5 +206,9 @@ clust_diana_euclidean <- fviz_dend(diana_euclidean,
                                   ylab = "Distancia") + theme_classic()
 clust_diana_euclidean
 ```
+## Métodos supervisados 
 
+•	K-NN -> Judit
+•	LDA -> Ana
+•	Random forest -> Valeria
 
