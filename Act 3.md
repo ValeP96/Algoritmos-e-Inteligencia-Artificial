@@ -82,6 +82,9 @@ df_scaled <- df_filter %>%
   select(-sample, -class) %>%   # solo expresión génica
   scale()                       # escala a media 0 y varianza 1
 ```
+
+El escalado elimina diferencias de magnitud entre genes, reduce el impacto de valores altos, y es esencial para alguno de los métodos utilizados a continuación. 
+
 ## Métodos no supervisados 
 
 ### Técnicas de reducción de dimensionalidad
