@@ -32,7 +32,7 @@ Confirmo que no hay NA
 which(is.na(df))
 ```
 
-Revición del df
+Revisión del df
 
 ```{r}
 skim_sd0 <- skim_df %>%
@@ -46,11 +46,117 @@ Vemos que hay 3 genes con sd 0 y los eliminamos:
 ```{r}
 genes_sd0 <- c("RPL22L1", "ZCCHC12", "MIER3")
 
-df_filtered <- df %>%
+df_filter <- df %>%
   select(-all_of(genes_sd0))   # elimina los genes con solo 0
 
-df_scaled <- df_filtered %>%
+df_scaled <- df_filter %>%
   select(-sample, -class) %>%   # solo expresión génica
   scale()                        # escala a media 0 y varianza 1
 ```
+HEATMAP
+Hacemos un heatmap para ver la expresion de los genes
+```{r}
+library(pheatmap)
+#Probamos a hacer con el dataset completo, pero son muchos genes, asi que para que sea visual, elegimos 50 genes con mayor varianza
+top_genes2 <- names(sort(varianza, decreasing = TRUE))[1:50]
+matriz_genes2 <- df_numeric[, top_genes2]
+View(matriz_genes)
+#hago el heatmap con estos 50 genes
+heatmap50 <- pheatmap(
+  matriz_genes,
+  show_rownames = TRUE,
+  show_colnames = TRUE,
+  clustering_distance_rows = "euclidean",
+  clustering_distance_cols = "euclidean",
+  clustering_method = "complete"
+)
+```
+
+TÉCNICAS DE CLUSTERIZACIÓN:
+1) CLUSTERIZACION AGLOMERATIVA
+Como 800 genes no nos da resultado de nada, vamos a hacer las mismas técnicas con los 50 genes selecionados con mas varianza
+Reduzco a 50 genes.
+```{r}
+top_genes50 <- names(sort(varianza, decreasing = TRUE))[1:50]
+matriz_genes50 <- df_filter[, top_genes50]
+View(matriz_genes50)
+distancia_matriz50 <- dist(matriz_genes50)
+distancia_matriz50
+
+hclust_single50 <- hclust(distancia_matriz50, method = "single")
+hclust_complete50 <- hclust(distancia_matriz50, method = "complete")
+hclust_average50 <- hclust(distancia_matriz50, method = "average")
+hclust_ward50 <- hclust(distancia_matriz50, method = "ward.D2")
+
+#calculamos la variable de indices para el orden en el dendograma
+
+hclust_single50$order
+hclust_complete50$order
+hclust_average50$order
+hclust_ward50$order
+
+#graficamos resultados
+
+plot(hclust_single50, main = "Single Linkage")
+plot(hclust_complete50, main = "Complete Linkage")
+plot(hclust_average50, main = "Average Linkage")
+plot(hclust_ward50, main = "Ward Linkage")
+
+#por colores y con la funcion fviz_den para hacer el dendograma
+
+colores <- rainbow(10)
+clust_single <- fviz_dend(hclust_single50, 
+                          cex = 0.5, 
+                          k = 10, 
+                          palette = colores, 
+                          main = "Single Linkage Dendogram", 
+                          xlab = "Índice de Observaciones", 
+                          ylab = "Distancia") + theme_classic()
+clust_single
+
+clust_complete <- fviz_dend(hclust_complete50, 
+                          cex = 0.5, 
+                          k = 10, 
+                          palette = colores, 
+                          main = "Complete Linkage Dendogram", 
+                          xlab = "Índice de Observaciones", 
+                          ylab = "Distancia") + theme_classic()
+clust_complete
+
+clust_average <- fviz_dend(hclust_average50, 
+                          cex = 0.5, 
+                          k = 10, 
+                          palette = colores, 
+                          main = "Average Linkage Dendogram", 
+                          xlab = "Índice de Observaciones", 
+                          ylab = "Distancia") + theme_classic()
+clust_average
+
+clust_ward <- fviz_dend(hclust_ward50, 
+                          cex = 0.5, 
+                          k = 10, 
+                          palette = colores, 
+                          main = "Ward Linkage Dendogram", 
+                          xlab = "Índice de Observaciones", 
+                          ylab = "Distancia") + theme_classic()
+clust_ward
+#Utilizamos la funcion de grid.arrange para juntar en una sola gráfica los dendogramas obtenidos
+library(gridExtra)
+dendogramas_todos <- grid.arrange(clust_single, clust_complete, clust_average, clust_ward, nrow = 2)
+dendogramas_todos
+```
+2) CLUSTERIZACION DECISIVA: DIANA
+```{r}
+library(cluster)
+diana_euclidean <- diana(df_scaled, metric = "euclidean", stand = F)
+clust_diana_euclidean <- fviz_dend(diana_euclidean, 
+                                  cex = 0.5, 
+                                  k = 10, 
+                                  palette = colores, 
+                                  main = "DIANA Euclidean", 
+                                  xlab = "Indice de observaciones", 
+                                  ylab = "Distancia") + theme_classic()
+clust_diana_euclidean
+```
+
 
