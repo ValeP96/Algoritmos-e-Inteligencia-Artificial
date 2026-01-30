@@ -1,13 +1,13 @@
-#### Actividad 3. Análisis de un conjunto de datos de origen biológico mediante técnicas de machine learning supervisadas y no supervisadas
+# Actividad 3. Análisis de un conjunto de datos de origen biológico mediante técnicas de machine learning supervisadas y no supervisadas
 
-### Entorno
+## Entorno
 
 ```{r}
 library(tidyverse)
 library(skimr)
 ```
 
-### Procesamiento de los datos 
+## Procesamiento de los datos 
 
 Creacion del dataframe:
 
