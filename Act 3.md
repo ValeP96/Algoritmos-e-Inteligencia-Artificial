@@ -23,12 +23,10 @@ library(skimr)
 
 # Graficos
 library(ggplot2)
-library(pheatmap)
 
 # Métodos de aprendizaje no supervisados
 library(RDRToolbox)
-library(cluster)
-library(stats)
+
 # Métodos de aprendizaje supervisados
 library(caret)
 library(randomForest)
@@ -88,24 +86,6 @@ df_scaled <- df_filter %>%
 ```
 
 El escalado elimina diferencias de magnitud entre genes, reduce el impacto de valores altos, y es esencial para alguno de los métodos utilizados a continuación. 
-##HEATMAP
-Hacemos un heatmap para ver la expresion de los genes
-```{r}
-varianza <- apply(df_numeric, 2, var, na.rm = TRUE) #nos quedamos con los que mayor varianza tengan
-top_genes100 <- names(sort(varianza, decreasing = TRUE))[1:100] #acotamos primero a 100 genes, y probamos
-matriz_genes <- df_numeric[, top_genes100] #matriz de 100 genes
-top_genes2 <- names(sort(varianza, decreasing = TRUE))[1:50] #despues acotamos finalmente a matriz de 50 genes
-matriz_genes2 <- df_numeric[, top_genes2] #creamos la matriz de 50 genes 
-View(matriz_genes)
-#Hacemos el heatmap con estos 50 genes
-heatmap50 <- pheatmap(
-  matriz_genes,
-  show_rownames = TRUE,
-  show_colnames = TRUE,
-  clustering_distance_rows = "euclidean",
-  clustering_distance_cols = "euclidean",
-  clustering_method = "complete"
-)
 
 ## Métodos no supervisados 
 
@@ -119,43 +99,36 @@ Se implementaron y evaluaron cuatro métodos de aprendizaje no supervisado de re
 •	t-SNE → Judit
 
 #### PCA
-```{r}
-library(stats)
-library(ggplot2)
-#vamos a utilizar la base de datos eescaladas, pero tengo que añadirle la columna de Class de la base de datos ya filtrada
-df_scaled_class <- cbind(df_scaled, df_filter[, 2, drop = FALSE])
-
-pca_resultados <- prcomp(df_scaled, center = TRUE, scale. = FALSE) #hago con data_final_heatmap, en vez de data_final porque es la que contiene solamente datos numéricos
-
-#para los calculos de los componentes principales
-pca_dataframe <- data.frame(pca_resultados$x)
-varianzas_pca <- pca_resultados$sdev^2 #calculo de las varianzas
-total_varianzas_pca <- sum(varianzas_pca) #total varianza de los datos
-varianza_explicada <- varianzas_pca/total_varianzas_pca #varianza de cada componente principal 
-varianza_acumulada <- cumsum(varianza_explicada) #calculo de la varianza acumulada
-num_componentespca <- min(which(varianza_acumulada > 0.90)) #ver el numero de componentes principales que me calculan el 90% de la varianza de los datos 
-#graficamos
-x_label <- paste0(paste('PC1', round(varianza_explicada[1]*100,2)), '%')
-y_label <- paste0(paste('PC2', round(varianza_explicada[2]*100,2)), '%')
-
-#para ver los datos por clase, tengo que añadir esta variable al data.frame de PCA:
-pca_dataframe$Class <- df_filter[, 2]
-
-pca_grafica <- ggplot(pca_dataframe, aes(x = PC1, y = PC2, color = Class)) +
-  geom_point(size = 3) +
-  labs(title = 'PCA - Types of Cancer', x = x_label, y = y_label, color = 'Grupo') +
-  theme_classic() +
-  theme(
-    panel.grid.major = element_line(color = "gray90"),
-    panel.grid.minor = element_blank(),
-    panel.background = element_rect(fill = "gray95"),
-    plot.title = element_text(hjust = 0.5)
-  )
-pca_grafica
-```
-En la técnica de analisis de componentes principales (PCA) podemos ver como la clase AGH se diferencia notablemente de las demás con el primer componente. Sin embargo, el resto de clases no se diferencian teniendo en cuenta estos dos componentes, por lo que esta técnica quedaría limitada para dar unos resultados concluyentes, posiblemente porque las variables no estén muy correlacionadas y se necesite un mayor numero de componentes que maximicen la varianza entre las diferentes variables. 
 
 #### Isomap
+ISOMAP es un algoritmo eficaz para descubrir estructuras no lineales en conjuntos de datos de alta dimensionalidad, ya que busca preservar las distancias geodésicas entre los puntos, es decir, las distancias a lo largo de la variedad subyacente. Este método extiende el Análisis de Componentes Principales (PCA) a contextos no lineales mediante la construcción de un grafo de vecinos y el cálculo de las distancias más cortas entre ellos. No obstante, ISOMAP presenta ciertas limitaciones, como su sensibilidad a la elección del número de vecinos y a la presencia de ruido, lo que puede provocar distorsiones en la estimación de las distancias y afectar a la calidad de la proyección final.
+
+El número de vecinos está representado por el número k. En este caso, se escogió el valor de k=10 ya que nos permitía visualizar mejor graficamente las relaciones locales entre las diferentes clases. 
+```{r}
+set.seed(123)
+X <- as.matrix(df_scaled[, -1])
+y   <- df_filter$class
+
+isomap.df <- data.frame(
+  Dim1  = isomap.results$dim2[, 1],
+  Dim2  = isomap.results$dim2[, 2],
+  class = y
+)
+```
+Para graficar, se utilizó el siguiente código:
+```{r}
+ggplot(isomap.df, aes(Dim1, Dim2, color = class)) +
+  geom_point(size = 2.5, alpha = 0.85) +
+  labs(
+    title = "Isomap (k = 10)",
+    x = "Dimensión 1",
+    y = "Dimensión 2",
+    color = "Clase"
+  ) +
+  theme_classic() +
+  theme(plot.title = element_text(hjust = 0.5))
+```
+La graficicación obtenida mediante Isomap (k = 10) muestra una separación clara entre la mayoría de las clases analizadas. La clase AGH aparece claramente aislada del resto, mientras que CFB forma un clúster amplio y bien definido. Por el contrario, las clases CGC y HPB presentan cierta proximidad y solapamiento, lo que sugiere similitudes en sus patrones de expresión génica. En conjunto, Isomap captura de forma eficaz la estructura no lineal de los datos, proporcionando una representación más informativa que métodos lineales como PCA.
 
 #### Locally linear embedding (LLE)
 
@@ -194,8 +167,82 @@ Como puede observarse en el análisis anterior, la mejor separación de los tipo
 k-means -> Ana
 •	Jerarquico → Carla
 
-
+HEATMAP
+Hacemos un heatmap para ver la expresion de los genes
+```{r}
+library(pheatmap)
+#Probamos a hacer con el dataset completo, pero son muchos genes, asi que para que sea visual, elegimos 50 genes con mayor varianza
+top_genes2 <- names(sort(varianza, decreasing = TRUE))[1:50]
+matriz_genes2 <- df_numeric[, top_genes2]
+View(matriz_genes)
+#hago el heatmap con estos 50 genes
+heatmap50 <- pheatmap(
+  matriz_genes,
+  show_rownames = TRUE,
+  show_colnames = TRUE,
+  clustering_distance_rows = "euclidean",
+  clustering_distance_cols = "euclidean",
+  clustering_method = "complete"
+)
 ```
+TÉCNICAS DE CLUSTERIZACIÓN JERÁRQUICO (WARD) sobre Isomap 
+```{r}
+set.seed(123)                                    # Fija la semilla para reproducibilidad
+
+# Número de clusters = número de clases reales
+k <- length(unique(y))                           # Calcula k como el nº de clases distintas
+
+# Aplicación de K-means sobre las dos dimensiones de Isomap
+km <- kmeans(
+  isomap.df[, c("Dim1", "Dim2")],                # Datos 2D obtenidos con Isomap
+  centers = k,                                   # Número de clusters
+  nstart = 25                                    # Nº de inicializaciones aleatorias
+)
+
+# Añadir el clúster asignado a cada muestra
+isomap.df$cluster_km <- factor(km$cluster)       # Convierte el clúster a factor
+
+# Cálculo de la envolvente convexa para cada clúster
+hulls <- isomap.df %>%
+  group_by(cluster_km) %>%                       # Agrupa por clúster de K-means
+  slice(chull(Dim1, Dim2)) %>%                   # Selecciona los puntos extremos
+                                                  # que forman el polígono del clúster
+  ungroup()                                      # Elimina la estructura de agrupación
+
+# Gráfico de los resultados de K-means sobre Isomap
+ggplot(isomap.df, aes(Dim1, Dim2, color = cluster_km)) +
+  
+  geom_polygon(                                  # Dibuja los polígonos de cada clúster
+    data = hulls,                                # Usa solo los puntos frontera
+    aes(fill = cluster_km, group = cluster_km),  # Relleno y agrupación por clúster
+    alpha = 0.2,                                 # Transparencia del polígono
+    color = NA                                   # Sin borde para el polígono
+  ) +
+  
+  geom_path(                                     # Dibuja el contorno del polígono
+    data = hulls,
+    aes(group = cluster_km),
+    linewidth = 0.8                              # Grosor del borde
+  ) +
+  
+  geom_point(                                    # Dibuja las muestras individuales
+    size = 2,                                    # Tamaño de los puntos
+    alpha = 0.85                                 # Transparencia ligera
+  ) +
+  
+  labs(
+    title = paste0("K-Means plot, centros = ", k), # Título del gráfico
+    x = "Isomap - Dimensión 1",                     # Etiqueta eje X
+    y = "Isomap - Dimensión 2",                     # Etiqueta eje Y
+    color = "Cluster",                              # Leyenda del color
+    fill  = "Cluster"                               # Leyenda del relleno
+  ) +
+  
+  theme_minimal()                                # Tema visual limpio y académico
+```
+El algoritmo K-means aplicado sobre la proyección Isomap 2D identifica cinco clústeres bien definidos, con escaso solapamiento y una clara diferenciación espacial entre los grupos.
+
+
 
 TÉCNICAS DE CLUSTERIZACIÓN:
 1) CLUSTERIZACION AGLOMERATIVA
@@ -321,6 +368,89 @@ test_data_scaled <- cbind(test_scaled, class = test_data$class)
 •	K-NN -> Judit
 •	LDA -> Ana
 •	Random forest -> Valeria
+
+#### LDA
+El Análisis Discriminante Lineal (LDA) es un método supervisado que busca combinaciones lineales de las variables que maximizan la separación entre clases, permitiendo reducir la dimensionalidad y clasificar nuevas observaciones de forma eficiente.
+
+Creamos un dataset para LDA usando los genes escalados y la clase
+```{r}
+df_lda <- data.frame(
+  class = df_filter$class,
+  df_scaled
+)
+df_lda$class <- as.factor(df_lda$class)
+```
+
+#Partición train/test (80/20 estratificada)
+```{r}
+set.seed(123)
+idx_train <- createDataPartition(df_lda$class, p = 0.80, list = FALSE)
+train_df <- df_lda[idx_train, ]
+test_df <- df_lda[-idx_train, ]
+```
+Entrenamos el modelo y predeccimos 
+```{r}
+lda_model <- lda(class ~ ., data = train_df)
+lda_pred_train <- predict(lda_model, newdata = train_df)
+lda_pred_test <- predict(lda_model, newdata = test_df)
+```
+Miramos la matriz de confusión
+```{r}
+confusion <- confusionMatrix(lda_pred_test$class, test_df$class)
+print(confusion)
+```
+Como se puede observar, la tabla muestra las métricas de rendimiento del modelo LDA evaluado sobre el conjunto de test, desglosadas por cada una de las clases (AGH, CFB, CGC, CHC y HPB):
+
+En términos generales, el modelo presenta un rendimiento excelente, con valores cercanos a 1 en prácticamente todas las métricas, lo que indica una alta capacidad discriminativa entre las distintas clases.
+
+La sensibilidad mide la capacidad del modelo para identificar correctamente las muestras de cada clase. Los resultados muestran una sensibilidad perfecta (1.000) para las clases AGH, CGC, CHC y HPB, mientras que para CFB es ligeramente inferior (0.9833), lo que indica que solo un pequeño número de muestras de esta clase fue mal clasificado.
+
+La especificidad evalúa la capacidad del modelo para rechazar correctamente las muestras que no pertenecen a una clase determinada. En este caso, todas las clases presentan valores muy cercanos a 1, lo que refleja que el modelo apenas confunde muestras de otras clases con la clase evaluada. La clase CHC presenta una especificidad ligeramente inferior (0.9924), aunque sigue siendo muy elevada.
+
+El valor predictivo positivo indica la proporción de predicciones correctas entre las muestras clasificadas como pertenecientes a una clase. Todos los valores son iguales a 1, excepto en CHC (0.9643), lo que sugiere que una pequeña fracción de las muestras predichas como CHC pertenecen en realidad a otra clase.
+
+El valor predictivo negativo es prácticamente perfecto para todas las clases, indicando que cuando el modelo descarta una clase, lo hace de forma correcta.
+
+La exactitud balanceada combina sensibilidad y especificidad, siendo especialmente útil en contextos con clases desbalanceadas. Los valores obtenidos son muy elevados, con exactitud perfecta para AGH, CGC y HPB, y ligeramente inferior para CFB (0.9917) y CHC (0.9962).
+
+Las métricas de prevalencia y tasa de detección reflejan la distribución desigual de las clases en el conjunto de datos, siendo CFB la clase más representada y HPB la menos frecuente. A pesar de este desbalance, el modelo mantiene un rendimiento elevado en todas las clases.
+
+Graficamos 
+```{r}
+lda_proj <- lda_pred_train$x
+lda_plot_df <- cbind(train_df[, "class", drop = FALSE], as.data.frame(lda_proj))
+
+if (ncol(lda_proj) >= 2) {
+  
+  ggplot(lda_plot_df, aes(LD1, LD2, color = class)) +
+    geom_point(size = 2.2, alpha = 0.85) +
+    labs(
+      title = "LDA - Proyección en funciones discriminantes (TRAIN)",
+      x = "LD1",
+      y = "LD2",
+      color = "Clase"
+    ) +
+    theme_classic() +
+    theme(plot.title = element_text(hjust = 0.5))
+  
+} else {
+  
+  ggplot(lda_plot_df, aes(LD1, 0, color = class)) +
+    geom_jitter(height = 0.06, size = 2.2, alpha = 0.85) +
+    labs(
+      title = "LDA - Proyección (solo LD1, TRAIN)",
+      x = "LD1",
+      y = "",
+      color = "Clase"
+    ) +
+    theme_classic() +
+    theme(
+      axis.text.y = element_blank(),
+      axis.ticks.y = element_blank(),
+      plot.title = element_text(hjust = 0.5)
+    )
+}
+```
 
 #### Random forest
 
