@@ -24,6 +24,7 @@ library(skimr)
 # Graficos
 library(ggplot2)
 library(pheatmap)
+library(patchwork)
 
 # Métodos de aprendizaje no supervisados
 library(RDRToolbox)
@@ -36,7 +37,7 @@ library(caret)
 library(randomForest)
 library(MASS)
 library(pROC)
-library(patchwork)
+
 ```
 
 ## Procesamiento de los datos 
@@ -94,7 +95,7 @@ df_scaled <- df_filter %>%
 
 El escalado elimina diferencias de magnitud entre genes, reduce el impacto de valores altos, y es esencial para alguno de los métodos utilizados a continuación. 
 
-##HEATMAP
+#### HEATMAP
 Hacemos un heatmap para ver la expresion de los genes
 ```{r}
 varianza <- apply(df_numeric, 2, var, na.rm = TRUE) #nos quedamos con los que mayor varianza tengan
@@ -219,7 +220,7 @@ plot_LLE_50 <- ggplot(lle.df.50, aes(x = X1, y = X2, color = class)) +
 Este metodo permite una clara distinción de los tipos de cáncer AGH, HPB y CHC, aunque se superponen aún CGC y CHC. Es evidetne la ventaja de utilizar, para este dataframe en particular, un método no lineal.
 
 #### t-SNE
-INTRODUCCÓN T-SNE
+El método t-distribuited Stochastic Neighbor Embedding (t-SNE) es una técnica de reducción de dimensionalidad no lineal que preserva las relaciones locales entre las muestras. Este método de análisis és especialmente útil cuando los datos no se distribuyan de forma lineal, como ocurre en la expresión génica.
 ```{r}
 set.seed(123)
 # Matriz numérica de estructura local con 30 vecinos (perplexity)
