@@ -29,10 +29,14 @@ library(pheatmap)
 library(RDRToolbox)
 library(cluster)
 library(stats)
+library(Rtsne)
 
 # Métodos de aprendizaje supervisados
 library(caret)
 library(randomForest)
+library(MASS)
+library(pROC)
+library(patchwork)
 ```
 
 ## Procesamiento de los datos 
@@ -215,10 +219,34 @@ plot_LLE_50 <- ggplot(lle.df.50, aes(x = X1, y = X2, color = class)) +
 Este metodo permite una clara distinción de los tipos de cáncer AGH, HPB y CHC, aunque se superponen aún CGC y CHC. Es evidetne la ventaja de utilizar, para este dataframe en particular, un método no lineal.
 
 #### t-SNE
+INTRODUCCÓN T-SNE
+```{r}
+set.seed(123)
+# Matriz numérica de estructura local con 30 vecinos (perplexity)
+tsne <- Rtsne(as.matrix(df_scaled), perplexity = 30) 
 
+# Dataframe con las dimensiones y las clases (tipos de cáncer)
+tsne_df <- data.frame(Dim1 = tsne$Y[,1], Dim2 = tsne$Y[,2], Class = df_scaled_class$class) 
 
+# Representación gráfica
+tsne_grafica <- ggplot(tsne_df, aes(x = Dim1, y = Dim2, color = Class)) +
+  geom_point(size = 3, alpha = 0.8) +
+  labs(
+    title = "Método t-SNE",
+    x = "Dimensión 1",
+    y = "Dimensión 2",
+    color = "Tipo de cáncer"
+  ) +
+  theme_classic() +
+  theme(
+    panel.grid.major = element_line(color = "gray90"),
+    panel.grid.minor = element_blank(),
+    panel.background = element_rect(fill = "gray95"),
+    plot.title = element_text(hjust = 0.5)
+  )
 
-
+tsne_grafica
+```
 Como puede observarse en el análisis anterior, la mejor separación de los tipos de cáncer se obtuvo con t-SNE, seguido de LLE. Ambas presentan un manejo eficiente de datos no lineales, pero el t-SNE es claramente superior a la hora de identificar y revelar la importante estructura global.
 
 ### Técnicas de clusterización
@@ -374,11 +402,11 @@ Los métodos supervisados necesitan ser puestos a prueba y evaluados para confir
 
 ```{r}
 set.seed(2026) # Reproducibilidad
-train_index <- createDataPartition(df_filtered$class, p = 0.8, list = FALSE) # 80% de prueba
+train_index <- createDataPartition(df_filter$class, p = 0.8, list = FALSE) # 80% de prueba
 
 ## Dividimos datos en entrenamiento y test según los índices.
-train_data <- df_filtered[train_index, ]
-test_data <- df_filtered[-train_index, ]
+train_data <- df_filter[train_index, ]
+test_data <- df_filter[-train_index, ]
 
 ## Extraemos las variables numéicas para el conjuno de entrenamiento
 train_num <- train_data[, !(names(train_data) %in% c("sample", "class"))]
@@ -402,10 +430,74 @@ test_scaled <- as.data.frame(test_scaled)
 test_data_scaled <- cbind(test_scaled, class = test_data$class)
 ```
 
-
 •	K-NN -> Judit
 •	LDA -> Ana
 •	Random forest -> Valeria
+
+#### K-NN
+INTRODUCCIÓN
+```{r}
+set.seed(123)
+# Entrenamos el modelo k-NN
+knnModel <- train(class ~ .,
+                  data = train_data_scaled,
+                  method = "knn",
+                  trControl = trainControl(method = "cv", number = 10),
+                  tuneLength = 30
+)
+# Visualizamos los resultados del modelo entrenado y graficamos el rendimiento
+knnModel
+plot(knnModel)
+```
+
+```{r}
+# Predición sobre los datos de test
+predictions <- predict(knnModel, newdata = test_data_scaled)
+
+# Generamos la matriz de confusión
+confusionMatrix(predictions,test_data_scaled$class)
+
+# Calculamos la probabilidad estimada de pertenecer a cada clase (necessario para ROC y AUC)
+probabilities <- predict(knnModel, newdata = test_data_scaled, type = "prob")
+```
+GRAFICAMOS LA CURVA ROC PARA CADA TIPO DE CÁNCER
+# Lista para guardar los ggplots de k-NN
+roc_knn_plots <- list()
+
+# Loop sobre cada clase
+for (cls in levels(df_filter$class)) {
+  
+  # ROC one-vs-all para k-NN
+  roc_knn_obj <- roc(as.numeric(test_data_scaled$class == cls), probabilities[, cls])
+  
+  # Dataframe para ggplot
+  roc_knn_df <- data.frame(
+    FPR = 1 - roc_knn_obj$specificities,
+    TPR = roc_knn_obj$sensitivities
+  )
+  
+  # Crear el gráfico de k-NN
+  p_knn <- ggplot(roc_knn_df, aes(x = FPR, y = TPR)) +
+    geom_line(color = "lightblue", size = 1.2) +
+    geom_abline(slope = 1, intercept = 0, linetype = "dashed", color = "gray") +
+    theme_minimal() +
+    labs(
+      title = paste("ROC k-NN:", cls),
+      x = "1 - Especificidad (FPR)",
+      y = "Sensibilidad (TPR)"
+    ) +
+    annotate("text", x = 0.6, y = 0.1, 
+             label = paste0("AUC = ", round(auc(roc_knn_obj), 3)),
+             size = 5, color = "coral")
+  
+  roc_knn_plots[[cls]] <- p_knn
+}
+
+# Unir los gráficos k-NN en una sola figura
+roc_knn_combined <- wrap_plots(roc_knn_plots, ncol = 3)
+roc_knn_combined
+```
+CONCLUSIONES ROC/AUC
 
 #### LDA
 El Análisis Discriminante Lineal (LDA) es un método supervisado que busca combinaciones lineales de las variables que maximizan la separación entre clases, permitiendo reducir la dimensionalidad y clasificar nuevas observaciones de forma eficiente.
