@@ -500,7 +500,15 @@ for (cls in levels(df_filter$class)) {
 roc_knn_combined <- wrap_plots(roc_knn_plots, ncol = 3)
 roc_knn_combined
 ```
-Las curvas ROC y los valores de AUC por clase confirman que el modelo posee una capacidad casi perfecta para diferenciar cada categoría, mostrando un rendimiento robusto y consistente incluso en un escenario multiclase.
+Las curvas ROC y los valores de AUC por clase confirman que el modelo k-NN posee una capacidad casi perfecta para diferenciar cada categoría, mostrando un rendimiento robusto y consistente incluso en un escenario multiclase.
+
+Entre las ventajas del método K-NN destacan:
+- La clasificación es local, adaptándose bien a estructuras complejas de los datos.
+- Es relativamente robusto frente a pequeñas variaciones, siempre que los vecinos reflejen correctamente la estructura de cada clase.
+
+Y las limitaciones:
+- El rendimiento depende de la elección de k y de la escala de los datos, por lo que es imprescindible centrar y escalar las variables.
+- Puede ser sensible a ruido y outliers, especialmente con valores pequeños de k.
 
 #### LDA
 El Análisis Discriminante Lineal (LDA) es un método supervisado que busca combinaciones lineales de las variables que maximizan la separación entre clases, permitiendo reducir la dimensionalidad y clasificar nuevas observaciones de forma eficiente.
