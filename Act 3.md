@@ -23,10 +23,12 @@ library(skimr)
 
 # Graficos
 library(ggplot2)
+library(pheatmap)
 
 # Métodos de aprendizaje no supervisados
 library(RDRToolbox)
-
+library(cluster)
+library(stats)
 # Métodos de aprendizaje supervisados
 library(caret)
 library(randomForest)
@@ -86,6 +88,24 @@ df_scaled <- df_filter %>%
 ```
 
 El escalado elimina diferencias de magnitud entre genes, reduce el impacto de valores altos, y es esencial para alguno de los métodos utilizados a continuación. 
+##HEATMAP
+Hacemos un heatmap para ver la expresion de los genes
+```{r}
+varianza <- apply(df_numeric, 2, var, na.rm = TRUE) #nos quedamos con los que mayor varianza tengan
+top_genes100 <- names(sort(varianza, decreasing = TRUE))[1:100] #acotamos primero a 100 genes, y probamos
+matriz_genes <- df_numeric[, top_genes100] #matriz de 100 genes
+top_genes2 <- names(sort(varianza, decreasing = TRUE))[1:50] #despues acotamos finalmente a matriz de 50 genes
+matriz_genes2 <- df_numeric[, top_genes2] #creamos la matriz de 50 genes 
+View(matriz_genes)
+#Hacemos el heatmap con estos 50 genes
+heatmap50 <- pheatmap(
+  matriz_genes,
+  show_rownames = TRUE,
+  show_colnames = TRUE,
+  clustering_distance_rows = "euclidean",
+  clustering_distance_cols = "euclidean",
+  clustering_method = "complete"
+)
 
 ## Métodos no supervisados 
 
@@ -99,6 +119,41 @@ Se implementaron y evaluaron cuatro métodos de aprendizaje no supervisado de re
 •	t-SNE → Judit
 
 #### PCA
+```{r}
+library(stats)
+library(ggplot2)
+#vamos a utilizar la base de datos eescaladas, pero tengo que añadirle la columna de Class de la base de datos ya filtrada
+df_scaled_class <- cbind(df_scaled, df_filter[, 2, drop = FALSE])
+
+pca_resultados <- prcomp(df_scaled, center = TRUE, scale. = FALSE) #hago con data_final_heatmap, en vez de data_final porque es la que contiene solamente datos numéricos
+
+#para los calculos de los componentes principales
+pca_dataframe <- data.frame(pca_resultados$x)
+varianzas_pca <- pca_resultados$sdev^2 #calculo de las varianzas
+total_varianzas_pca <- sum(varianzas_pca) #total varianza de los datos
+varianza_explicada <- varianzas_pca/total_varianzas_pca #varianza de cada componente principal 
+varianza_acumulada <- cumsum(varianza_explicada) #calculo de la varianza acumulada
+num_componentespca <- min(which(varianza_acumulada > 0.90)) #ver el numero de componentes principales que me calculan el 90% de la varianza de los datos 
+#graficamos
+x_label <- paste0(paste('PC1', round(varianza_explicada[1]*100,2)), '%')
+y_label <- paste0(paste('PC2', round(varianza_explicada[2]*100,2)), '%')
+
+#para ver los datos por clase, tengo que añadir esta variable al data.frame de PCA:
+pca_dataframe$Class <- df_filter[, 2]
+
+pca_grafica <- ggplot(pca_dataframe, aes(x = PC1, y = PC2, color = Class)) +
+  geom_point(size = 3) +
+  labs(title = 'PCA - Types of Cancer', x = x_label, y = y_label, color = 'Grupo') +
+  theme_classic() +
+  theme(
+    panel.grid.major = element_line(color = "gray90"),
+    panel.grid.minor = element_blank(),
+    panel.background = element_rect(fill = "gray95"),
+    plot.title = element_text(hjust = 0.5)
+  )
+pca_grafica
+```
+En la técnica de analisis de componentes principales (PCA) podemos ver como la clase AGH se diferencia notablemente de las demás con el primer componente. Sin embargo, el resto de clases no se diferencian teniendo en cuenta estos dos componentes, por lo que esta técnica quedaría limitada para dar unos resultados concluyentes, posiblemente porque las variables no estén muy correlacionadas y se necesite un mayor numero de componentes que maximicen la varianza entre las diferentes variables. 
 
 #### Isomap
 
@@ -139,23 +194,7 @@ Como puede observarse en el análisis anterior, la mejor separación de los tipo
 k-means -> Ana
 •	Jerarquico → Carla
 
-HEATMAP
-Hacemos un heatmap para ver la expresion de los genes
-```{r}
-library(pheatmap)
-#Probamos a hacer con el dataset completo, pero son muchos genes, asi que para que sea visual, elegimos 50 genes con mayor varianza
-top_genes2 <- names(sort(varianza, decreasing = TRUE))[1:50]
-matriz_genes2 <- df_numeric[, top_genes2]
-View(matriz_genes)
-#hago el heatmap con estos 50 genes
-heatmap50 <- pheatmap(
-  matriz_genes,
-  show_rownames = TRUE,
-  show_colnames = TRUE,
-  clustering_distance_rows = "euclidean",
-  clustering_distance_cols = "euclidean",
-  clustering_method = "complete"
-)
+
 ```
 
 TÉCNICAS DE CLUSTERIZACIÓN:
