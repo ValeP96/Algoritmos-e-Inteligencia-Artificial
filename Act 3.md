@@ -34,9 +34,9 @@ library(Rtsne)
 
 # Métodos de aprendizaje supervisados
 library(caret)
+library(pROC)
 library(randomForest)
 library(MASS)
-library(pROC)
 
 ```
 
@@ -623,6 +623,7 @@ rf_pred <- predict(rf_model, newdata = test_data_scaled)
 ```
 
 Para evaluar el modelo, se realizó una matriz de confusióm: 
+
 ```{r}
 cm_rf <- confusionMatrix(rf_pred, test_data_scaled$class)
 cm_rf
@@ -638,7 +639,50 @@ metrics_rf
 
 Como puede observarse, la presición, sensibilidad, especificidad y F1 son iguales o cercanos a 1 en todos los casos, indicando la excelente capacidad del modelo para clasificar los tipos de cáncer en base a la expresión génica. 
 
-Los métodos de bagging tienen como ventaja que:
+Esto tambien puede evidenciarse en las curvas ROC, las cuales fueron calculadas con sel siguiente script, mediante una estrategia one-vs-rest para cada clase, utilizando las probabilidades predichas por el modelo Random Forest. Los valores de AUC iguales a 1 demuestran también la excelente capacidad discriminativa de este modelo.
+
+```{r}
+test_x <- test_data_scaled[, !names(test_data_scaled) %in% "class"]
+
+rf_prob <- predict(
+  rf_model,
+  newdata = test_x,
+  type = "prob"
+)
+classes <- levels(test_data_scaled$class)
+
+roc_list <- lapply(classes, function(cl) {
+  roc(
+    response = as.numeric(test_data_scaled$class == cl),
+    predictor = rf_prob[, cl],
+    quiet = TRUE
+  )
+})
+
+names(roc_list) <- classes
+
+plot(
+  roc_list[[1]],
+  col = 1,
+  lwd = 2,
+  main = "Curvas ROC – Random Forest (One-vs-Rest)"
+)
+
+for (i in 2:length(roc_list)) {
+  plot(roc_list[[i]], col = i, lwd = 2, add = TRUE)
+}
+
+legend(
+  "bottomright",
+  legend = paste0(classes, " (AUC = ",
+                  round(sapply(roc_list, auc), 3), ")"),
+  col = 1:length(classes),
+  lwd = 2,
+  cex = 0.9
+)
+```
+
+Los métodos de bagging, como lo es el Random Forest, tienen como ventaja que:
 
 * Presentan una reducción de la varianza, lo que puede mejorar la capacidad de generalización y hacer que las predicciones sean más estables;
 * Al promediar o combinar las predicciones de varios modelos, pueden mejorar la precisión y el rendimiento del modelo final;
