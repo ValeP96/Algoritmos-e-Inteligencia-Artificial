@@ -430,13 +430,8 @@ test_scaled <- predict(scale_params, test_num)
 test_scaled <- as.data.frame(test_scaled)
 test_data_scaled <- cbind(test_scaled, class = test_data$class)
 ```
-
-•	K-NN -> Judit
-•	LDA -> Ana
-•	Random forest -> Valeria
-
 #### K-NN
-INTRODUCCIÓN
+El método de aprendizaje supervisado k-NN se basa en los datos de entrenamiento durante la fase de predicción para asignar etiquetas a los datos no etiquetados. La predicción se realiza considerando las etiquetas de los vecinos más cercanos, de manera que un nuevo dato se clasifica según la mayoría de las etiquetas de sus k vecinos más próximos.
 ```{r}
 set.seed(123)
 # Entrenamos el modelo k-NN
@@ -450,7 +445,7 @@ knnModel <- train(class ~ .,
 knnModel
 plot(knnModel)
 ```
-
+En el output se presenta una tabla con los valores de precisión (Accuracy) y Kappa obtenidos para los distintos valores de k evaluados con los datos de entrenamiento. En el gráfico se observa que la máxima precisión se alcanza con k = 11 vecinos. Con este valor, el modelo logra una precisión de 0.998 y un Kappa de 0.998, lo que refleja un excelente rendimiento y un alto grado de acuerdo entre las predicciones del modelo y las etiquetas reales.
 ```{r}
 # Predición sobre los datos de test
 predictions <- predict(knnModel, newdata = test_data_scaled)
@@ -461,7 +456,14 @@ confusionMatrix(predictions,test_data_scaled$class)
 # Calculamos la probabilidad estimada de pertenecer a cada clase (necessario para ROC y AUC)
 probabilities <- predict(knnModel, newdata = test_data_scaled, type = "prob")
 ```
-GRAFICAMOS LA CURVA ROC PARA CADA TIPO DE CÁNCER
+El modelo k-NN empleado mostró un rendimiento muy elevado en la clasificación de las cinco categorías de muestras. La matriz de confusión indica que la mayoría de las muestras fueron correctamente clasificadas. Por ejemplo, todas las muestras de AGH, CHC y HPB se predijeron correctamente, mientras que en CFB se registró un falso negativo y un falso positivo, y en CGC un falso negativo, mostrando que los errores son muy pocos.
+
+La exactitud global (Accuracy) del modelo fue del 99,37%, y el Kappa = 0,992 evidencia un acuerdo casi perfecto entre las predicciones y las etiquetas reales, considerando el azar.
+
+Por clase, las métricas muestran sensibilidades y especificidades cercanas al 100%, indicando que el modelo es capaz de discriminar con fiabilidad cada tipo de cáncer, con un número muy reducido de falsos positivos y falsos negativos.
+
+```{r}
+# GRAFICAMOS LA CURVA ROC PARA CADA TIPO DE CÁNCER
 # Lista para guardar los ggplots de k-NN
 roc_knn_plots <- list()
 
@@ -498,7 +500,7 @@ for (cls in levels(df_filter$class)) {
 roc_knn_combined <- wrap_plots(roc_knn_plots, ncol = 3)
 roc_knn_combined
 ```
-CONCLUSIONES ROC/AUC
+Las curvas ROC y los valores de AUC por clase confirman que el modelo posee una capacidad casi perfecta para diferenciar cada categoría, mostrando un rendimiento robusto y consistente incluso en un escenario multiclase.
 
 #### LDA
 El Análisis Discriminante Lineal (LDA) es un método supervisado que busca combinaciones lineales de las variables que maximizan la separación entre clases, permitiendo reducir la dimensionalidad y clasificar nuevas observaciones de forma eficiente.
