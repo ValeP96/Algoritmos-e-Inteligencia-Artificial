@@ -6,7 +6,7 @@ El presente análisis se centra en un dataset que recopila información sobre la
 
 * AGH
 * CHC
-* HPB
+* HPB: Hiperplasia Benigna de Próstata
 * CGC
 * CFB           
 
@@ -25,9 +25,11 @@ library(skimr)
 library(ggplot2)
 
 # Métodos de aprendizaje no supervisados
+library(RDRToolbox)
 
 # Métodos de aprendizaje supervisados
-
+library(caret)
+library(randomForest)
 ```
 
 ## Procesamiento de los datos 
@@ -96,9 +98,42 @@ Se implementaron y evaluaron cuatro métodos de aprendizaje no supervisado de re
 •	LLE → Valeria
 •	t-SNE → Judit
 
+#### PCA
+
+#### Isomap
+
+#### Locally linear embedding (LLE)
+
+El LLE es un algoritmo altamente eficiente en descubrir las estructuras no lineales en los datos y preservar las distancias dentro del vecindario local. El LLE presenta ciertas limitaciones, pues es muy sensible al ruido y a los valores atípicos. Además, es posible que dos puntos de datos, que en realidad no se encuentren en el mismo parche localmente lineal, sean agrupados como si lo estuvieran.
+
+El número de vecinos, k, es su único parámetro libre, lo que simplifica el ajuste el algoritmo. En esta ocación fueron evaluados varios valores de k entre 10 y 80, seleccionando 50 como el óptimo. El algoritmo se implementó de la siguiente manera:
+
+```{r}
+lle.results.50 <- LLE(df_scaled, dim = 2, k = 50) # La dimensión final es 2, ya que son las dos que se van a representar gráficamente
+
+lle.df.50 <- data.frame(lle.results.50) # Creación de un dataframe a partir de los resultados
+
+lle.df.50$class <- df$class # Incorporación de la columna especificando los tipos de cáncer
+```
+
+Para la representación gráfica, se utilizó el siguiente código:
+
+```{r}
+plot_LLE_50 <- ggplot(lle.df.50, aes(x = X1, y = X2, color = class)) +
+  geom_point(size = 3) +
+  scale_color_manual(values = rainbow(10)) +
+  labs(title = "Método LLE - k=50", x = "X1", y = "X2") +
+  theme_classic()
+```
+
+Este metodo permite una clara distinción de los tipos de cáncer AGH, HPB y CHC, aunque se superponen aún CGC y CHC. Es evidetne la ventaja de utilizar, para este dataframe en particular, un método no lineal.
+
+#### t-SNE
 
 
-Como puede observarse en el análisis anterior, la mejor separación de los tipos de cáncer se obtuvo con t-SNE, seguido de LLE.
+
+
+Como puede observarse en el análisis anterior, la mejor separación de los tipos de cáncer se obtuvo con t-SNE, seguido de LLE. Ambas presentan un manejo eficiente de datos no lineales, pero el t-SNE es claramente superior a la hora de identificar y revelar la importante estructura global.
 
 ### Técnicas de clusterización
 k-means -> Ana
@@ -211,7 +246,91 @@ clust_diana_euclidean
 ```
 ## Métodos supervisados 
 
+Los métodos supervisados necesitan ser puestos a prueba y evaluados para confirmar que funcione correctamente con datos nuevos y que pueda generar resultados precisos. Luego, el conjunto de datos debe ser dividido en datos de entrenamiento y datos de prueba. En esta ocación utilizamos el 80% de los datos para el entrenamiento, y el 20% restante para la prueba, aplicando el siguiente código:
+
+```{r}
+set.seed(2026) # Reproducibilidad
+train_index <- createDataPartition(df_filtered$class, p = 0.8, list = FALSE) # 80% de prueba
+
+## Dividimos datos en entrenamiento y test según los índices.
+train_data <- df_filtered[train_index, ]
+test_data <- df_filtered[-train_index, ]
+
+## Extraemos las variables numéicas para el conjuno de entrenamiento
+train_num <- train_data[, !(names(train_data) %in% c("sample", "class"))]
+
+## Escalamos usando SOLO entrenamiento
+scale_params <- preProcess(train_num, method = c("center", "scale"))
+train_scaled <- predict(scale_params, train_num)
+
+## Reconstruimos dataset de entrenamiento
+train_scaled <- as.data.frame(train_scaled)
+train_data_scaled <- cbind(train_scaled, class = train_data$class)
+
+## Extraemos las variables numéicas para el conjuno de test
+test_num <- test_data[, !(names(test_data) %in% c("sample", "class"))]
+
+## Aplicamos los MISMOS parámetros al test
+test_scaled <- predict(scale_params, test_num)
+
+## Reconstruimos dataset de test
+test_scaled <- as.data.frame(test_scaled)
+test_data_scaled <- cbind(test_scaled, class = test_data$class)
+```
+
+
 •	K-NN -> Judit
 •	LDA -> Ana
 •	Random forest -> Valeria
 
+#### Random forest
+
+Random forest es el método más popular basado en el bagging y consiste crear y  combinar un gran número de árboles de decisión en un gran bosque para obtener una salida más robusta y confiable. Se implementó este algoritmo usando el siguente script:
+
+```{r}
+# Renombrar columnas automáticamente para evitar problemas de compatibilidad con los nombres de los genes
+names(train_data_scaled) <- make.names(names(train_data_scaled))
+names(test_data_scaled)  <- make.names(names(test_data_scaled))
+
+# Entrenar modelo
+set.seed(2026)
+rf_model <- randomForest(class ~ .,
+                          data = train_data_scaled,
+                          ntree = 500, # Suficiente número de árboles para estabilidad
+                          mtry = 20) # Número de variables muestreadas al azar como candidatas en cada división
+
+# Predicción
+rf_pred <- predict(rf_model, newdata = test_data_scaled)
+```
+
+Para evaluar el modelo, se realizó una matriz de confusióm: 
+```{r}
+cm_rf <- confusionMatrix(rf_pred, test_data_scaled$class)
+cm_rf
+```
+Los resultados obtenidos en este algoritmo son excelentes, mostrando una única clasificación incorrecta. 
+
+El resumen de las métricas resultantes pueden verse a continuación:
+
+```{r}
+metrics_rf <- round(cm_rf$byClass[, c("Precision", "Sensitivity", "Specificity", "F1")], 3)
+metrics_rf
+```
+
+Como puede observarse, la presición, sensibilidad, especificidad y F1 son iguales o cercanos a 1 en todos los casos, indicando la excelente capacidad del modelo para clasificar los tipos de cáncer en base a la expresión génica. 
+
+Los métodos de bagging tienen como ventaja que:
+
+* Presentan una reducción de la varianza, lo que puede mejorar la capacidad de generalización y hacer que las predicciones sean más estables;
+* Al promediar o combinar las predicciones de varios modelos, pueden mejorar la precisión y el rendimiento del modelo final;
+* Tienden a ser menos sensibles a los datos atípicos, lo que ayuda a mejorar la robustez del modelo.
+
+Por otro lado, estos métodos:
+
+* Suelen ser computacionalmente más costosos;
+* Pueden ser más dificiles de interpretar;
+* Presentan un riesgo de sobreajuste cuando los modelos de base individuales están sobreajustados a los datos de entrenamiento.
+
+## Deep learning
+
+Aunque para esta actividad no se aplicará ningún método de deep learning, de tener que elegir un tipo de arquetectura, seleccionariamos una red de perceptrones (MLP). Estas redes están diseñadas para datos tabulates, donde cada gen se modela como una variable independiente de entrada. No requieren estructura adicional que no se encuentre presente en nuestro dataframe. Además, capturan relaciones no lineales entre genes, como hemos demostrtado que lo exige el caso en estudio.
