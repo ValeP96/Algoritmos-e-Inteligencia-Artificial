@@ -121,8 +121,8 @@ Para la representación gráfica, se utilizó el siguiente código:
 ```{r}
 plot_LLE_50 <- ggplot(lle.df.50, aes(x = X1, y = X2, color = class)) +
   geom_point(size = 3) +
-  scale_color_manual(values = rainbow(10)) +
-  labs(title = "Método LLE - k=50", x = "X1", y = "X2") +
+  scale_color_manual(values = rainbow(5)) +
+  labs(title = "Método LLE", x = "X1", y = "X2") +
   theme_classic()
 ```
 
