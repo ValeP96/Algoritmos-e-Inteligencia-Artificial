@@ -248,7 +248,16 @@ tsne_grafica <- ggplot(tsne_df, aes(x = Dim1, y = Dim2, color = Class)) +
 
 tsne_grafica
 ```
-Como puede observarse en el análisis anterior, la mejor separación de los tipos de cáncer se obtuvo con t-SNE, seguido de LLE. Ambas presentan un manejo eficiente de datos no lineales, pero el t-SNE es claramente superior a la hora de identificar y revelar la importante estructura global.
+Como se observó en el análisis previo, la mejor separación entre los distintos tipos de cáncer se obtuvo con t-SNE, seguida de LLE. Ambos métodos manejan eficientemente la estructura no lineal de los datos, aunque t-SNE destaca por su capacidad para revelar patrones locales y la estructura global del dataset.
+
+Entre las ventajas de t-SNE se incluyen:
+- Visualización clara de agrupamientos locales incluso en datos con relaciones no lineales.
+- Facilita la detección de subgrupos y patrones en un espacio reducido de dimensión.
+
+Limitaciones a considerar:
+- La interpretación de distancias globales entre grupos lejanos puede no reflejar similitudes reales.
+- Los resultados dependen de parámetros como perplexity y número de iteraciones, requiriendo ajuste cuidadoso.
+- No genera un modelo aplicable a nuevas muestras; se utiliza únicamente para exploración y visualización..
 
 ### Técnicas de clusterización
 k-means -> Ana
