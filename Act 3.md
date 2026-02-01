@@ -10,7 +10,8 @@ El presente análisis se centra en un dataset que recopila información sobre la
 - CFB
 El objetivo principal es implementar de forma razonada técnicas de aprendizaje supervisado y no supervisados para detectar patrones intrínsecos en el conjunto de datos y evaluar la capacidad de estos métodos para distinguir e identificar los distintos tipos de cáncer en base a los distintos perfiles de expresión génica.
 
-#*1) ENTORNO*
+#1) ENTORNO
+
 En primer lugar, se cargaron las siguientes librerías para poder llevar a cabo el análisis:
 ```{r cars}
 # Manipulación, importación, exploración y visualización de datos
