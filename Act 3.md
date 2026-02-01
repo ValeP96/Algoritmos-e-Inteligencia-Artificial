@@ -254,7 +254,7 @@ Entre las ventajas de t-SNE se incluyen:
 Limitaciones a considerar:
 - La interpretación de distancias globales entre grupos lejanos puede no reflejar similitudes reales.
 - Los resultados dependen de parámetros como perplexity y número de iteraciones, requiriendo ajuste cuidadoso.
-- No genera un modelo aplicable a nuevas muestras; se utiliza únicamente para exploración y visualización..
+- No genera un modelo aplicable a nuevas muestras; se utiliza únicamente para exploración y visualización.
 
 ### Técnicas de clusterización
 Se aplicaron distintos métodos de clusterización para identificar agrupamientos naturales en los datos de expresión génica. K-means se utilizó sobre la proyección Isomap 2D por su simplicidad y eficiencia, fijando el número de clústeres según las clases reales.
