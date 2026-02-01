@@ -10,7 +10,7 @@ El presente análisis se centra en un dataset que recopila información sobre la
 - CFB
 El objetivo principal es implementar de forma razonada técnicas de aprendizaje supervisado y no supervisados para detectar patrones intrínsecos en el conjunto de datos y evaluar la capacidad de estos métodos para distinguir e identificar los distintos tipos de cáncer en base a los distintos perfiles de expresión génica.
 
-#1) ENTORNO
+# 1. ENTORNO
 
 En primer lugar, se cargaron las siguientes librerías para poder llevar a cabo el análisis:
 ```{r cars}
@@ -38,7 +38,8 @@ library(pROC)
 library(randomForest)
 library(MASS)
 ```
-#*2) PROCESAMIENTO DE LOS DATOS*
+# 2. PROCESAMIENTO DE LOS DATOS
+
 Se importaron los tres archivos provistos y se generó un único dataframe.
 ```{r}
 setwd("C:/Users/Usuario/Documents/Master en Bioinformática/AÑO 2 (2025-2026)/Algoritmos e Inteligencia Artificial/Actividad 3")
@@ -112,13 +113,15 @@ heatmap50 <- pheatmap(
   clustering_method = "complete"
 )
 ```
-#*3) MÉTODOS DE APRENDIZAJE NO SUPERVISADO*
-##*3.1 Técnicas de reducción de dimensionalidad* 
+# 3. MÉTODOS DE APRENDIZAJE NO SUPERVISADO*
+## 3.1 Técnicas de reducción de dimensionalidad
+
 Se implementaron cuatro métodos no supervisados de reducción de dimensionalidad (PCA, Isomap, LLE y t-SNE) con el objetivo de explorar la estructura interna del conjunto de datos y evaluar su capacidad para revelar patrones y agrupamientos entre los distintos tipos de cáncer. Estos métodos fueron seleccionados por ofrecer enfoques complementarios, tanto lineales como no lineales, adecuados para datos de expresión génica con relaciones complejas.
 
 PCA se utilizó como método lineal de referencia para capturar la varianza global de los datos. Isomap se seleccionó por su capacidad para preservar la estructura global en datos no lineales, LLE por mantener las relaciones locales entre muestras, y t-SNE por su elevada capacidad para visualizar agrupamientos locales y separar clases en espacios de baja dimensión.
 
-##**3.1.1 Análisis de Componentes Principales (PCA)** 
+### *3.1.1 Análisis de Componentes Principales (PCA)*
+
 l objetivo principal del PCA (Análisis de Componentes Principales) es maximizar la varianza y reducir la dimensionalidad del conjunto de variables. Se caracteriza por combinar linealmente las variables originales y transformarlas en un nuevo conjunto de variables no correlacionadas, conocidas como componentes principales (PC).
 ```{r}
 #vamos a utilizar la base de datos eescaladas, pero tengo que añadirle la columna de Class de la base de datos ya filtrada
@@ -154,7 +157,8 @@ pca_grafica
 ```
 En la técnica de analisis de componentes principales (PCA) podemos ver como la clase AGH se diferencia notablemente de las demás con el primer componente. Sin embargo, el resto de clases no se diferencian teniendo en cuenta estos dos componentes, por lo que esta técnica quedaría limitada para dar unos resultados concluyentes, posiblemente porque las variables no estén muy correlacionadas y se necesite un mayor numero de componentes que maximicen la varianza entre las diferentes variables.
 
-##**3.1.2 Isomap** 
+### *3.1.2 Isomap*
+
 ISOMAP es un algoritmo eficaz para descubrir estructuras no lineales en conjuntos de datos de alta dimensionalidad, ya que busca preservar las distancias geodésicas entre los puntos, es decir, las distancias a lo largo de la variedad subyacente. Este método extiende el Análisis de Componentes Principales (PCA) a contextos no lineales mediante la construcción de un grafo de vecinos y el cálculo de las distancias más cortas entre ellos. No obstante, ISOMAP presenta ciertas limitaciones, como su sensibilidad a la elección del número de vecinos y a la presencia de ruido, lo que puede provocar distorsiones en la estimación de las distancias y afectar a la calidad de la proyección final.
 
 El número de vecinos está representado por el número k. En este caso, se escogió el valor de k=10 ya que nos permitía visualizar mejor graficamente las relaciones locales entre las diferentes clases.
@@ -186,7 +190,8 @@ ggplot(isomap.df, aes(x = X1, y = X2, color = y)) +
 ```
 La graficicación obtenida mediante Isomap (k = 10) muestra una separación clara entre la mayoría de las clases analizadas. La clase AGH aparece claramente aislada del resto, mientras que CFB forma un clúster amplio y bien definido. Por el contrario, las clases CGC y HPB presentan cierta proximidad y solapamiento, lo que sugiere similitudes en sus patrones de expresión génica. En conjunto, Isomap captura de forma eficaz la estructura no lineal de los datos, proporcionando una representación más informativa que métodos lineales como PCA.
 
-##**3.1.3 Locally Lineal embedding (LLE)**
+### *3.1.3 Locally Lineal embedding (LLE)*
+
 El LLE es un algoritmo altamente eficiente en descubrir las estructuras no lineales en los datos y preservar las distancias dentro del vecindario local. El LLE presenta ciertas limitaciones, pues es muy sensible al ruido y a los valores atípicos. Además, es posible que dos puntos de datos, que en realidad no se encuentren en el mismo parche localmente lineal, sean agrupados como si lo estuvieran.
 
 El número de vecinos, k, es su único parámetro libre, lo que simplifica el ajuste el algoritmo. En esta ocación fueron evaluados varios valores de k entre 10 y 80, seleccionando 50 como el óptimo. El algoritmo se implementó de la siguiente manera:
@@ -212,7 +217,8 @@ plot_LLE_50
 ```
 Este metodo permite una clara distinción de los tipos de cáncer AGH y CHC, aunque se superponen aún CGC y CHCC y una parte de los componentes del grupo CFB. Es evidente la ventaja de utilizar, para este dataframe en particular, un método no lineal ya que separa las clases de AGH y CHC como no se habian separado antes.
 
-##**3.1.4 t-SNE**
+### *3.1.4 t-SNE*
+
 El método t-distribuited Stochastic Neighbor Embedding (t-SNE) es una técnica de reducción de dimensionalidad no lineal que preserva las relaciones locales entre las muestras. Este método de análisis és especialmente útil cuando los datos no se distribuyan de forma lineal, como ocurre en la expresión génica.
 ```{r}
 set.seed(123)
@@ -254,12 +260,14 @@ Limitaciones a considerar:
 Como se observó en el análisis previo, la mejor separación entre los distintos tipos de cáncer se obtuvo con t-SNE, seguida de LLE. Ambos métodos permiten capturar eficazmente la estructura no lineal de los datos, si bien t-SNE destaca por su mayor capacidad para revelar patrones locales y preservar la organización global del conjunto de datos.
 
 
-##*3.2 TÉCNICAS DE CLUSTERIZACIÓN* 
+## 3.2 Técnicas de clusterización
+
 Se aplicaron distintos métodos de clusterización para identificar agrupamientos naturales en los datos de expresión génica. K-means se utilizó sobre la proyección Isomap 2D por su simplicidad y eficiencia, fijando el número de clústeres según las clases reales.
 
 Además, se emplearon métodos jerárquicos aglomerativos (single, complete, average y Ward) y el método divisivo DIANA sobre los genes de mayor varianza para reducir ruido y explorar la estructura de los datos desde enfoques complementarios.
 
-##**3.2.1 Clusterización no jerárquica*
+### *3.2.1 Clusterización no jerárquica*
+
 ```{r}
 #se lleva a cabo sobre la tecnica de Isomap realizada previamente
 set.seed(123)                                    # Fija la semilla para reproducibilidad
@@ -317,7 +325,8 @@ ggplot(isomap.df, aes(X1, X2, color = cluster_km)) +
 El algoritmo K-means aplicado sobre la proyección Isomap 2D identifica cinco clústeres bien definidos, con escaso solapamiento y una clara diferenciación espacial entre los grupos.Destacando la clara diferenciación del cluster numero 3. 
 No podemos asegurar con certeza que los clústeres obtenidos sean los mejores, ya que este mínimo puede ser local y no global, ya que el resultado depende de la inicializacion de los centroides y del parámetro subjetivo que es k. 
 
-##**3.2.2 Clusterización jerárquica aglomerativa** 
+### *3.2.2 Clusterización jerárquica aglomerativa*
+
 Como 800 genes no nos da resultado de nada, vamos a hacer las mismas técnicas con los 50 genes selecionados anteriormente en la construcción del Heatmap con mas varianza
 ```{r}
 distancia_matriz50 <- dist(matriz_genes50)
@@ -378,7 +387,9 @@ library(gridExtra)
 dendogramas_todos <- grid.arrange(clust_single, clust_complete, clust_average, clust_ward, nrow = 2)
 ```
 Hemos decidido ver los 4 métodos de clusterización jerarquica aglomerativa para ver cual es el más optimo. Consideramos que el más óptimo es el Ward Linkage Dendogram porque, además de ser el más comunmente usado, calcula varianzas además de las distancias, pudiendo observar como se van clasificando el primer lugar haciendo dos clusteres que son los que mayor varianza tienen y luego realizando el resto, definienedo claramente los grupos, aunque somo sconscientes de que es dificil llegar a una conclusión definida por el número de genes que manejamos.
-##**3.2.3 Clusterización jerárquica decisiva**
+
+### *3.2.3 Clusterización jerárquica decisiva*
+
 ```{r}
 library(cluster)
 diana_euclidean <- diana(df_scaled, metric = "euclidean", stand = F)
@@ -393,7 +404,7 @@ clust_diana_euclidean
 ```
 Observamos que los resultados son similares a los obtenidos wn Ward Linkage, solamente que es una técnica de clusterizacion jerarquica decisiva, es decir, funciona de manera contraria, empezando de lo general a lo individual, calculando distancias euclídeas. 
 
-#*4. METODOS DE APRENDIZAJE SUPERVISADO*
+# 4. METODOS DE APRENDIZAJE SUPERVISADO
 
 Se implementaron tres métodos de aprendizaje supervisado: k-NN, LDA y Random Forest. Su elección se realizó con el objetivo de comparar enfoques supervisados complementarios. El método k-NN se seleccionó por su simplicidad y por su capacidad para capturar relaciones locales entre muestras sin asumir una forma funcional previa de los datos. LDA se incluyó como un método estadístico clásico, adecuado para evaluar la separabilidad entre clases bajo supuestos de normalidad y varianzas homogéneas, sirviendo además como una referencia interpretable. Finalmente, Random Forest se empleó por su capacidad para modelar relaciones no lineales complejas, su robustez frente al ruido y su buen rendimiento en conjuntos de datos con un gran número de variables.
 
@@ -414,7 +425,9 @@ df_filter$Class <- as.factor(df_filter$Class)
 trainData <- df_filter[trainIndex,]
 testData <- df_filter[-trainIndex,]
 ```
-##**4.1 kNN**
+
+## *4.1 kNN*
+
 El método de aprendizaje supervisado k-NN se basa en los datos de entrenamiento durante la fase de predicción para asignar etiquetas a los datos no etiquetados. La predicción se realiza considerando las etiquetas de los vecinos más cercanos, de manera que un nuevo dato se clasifica según la mayoría de las etiquetas de sus k vecinos más próximos.
 ```{r}
 set.seed(123)
@@ -513,7 +526,8 @@ Y las limitaciones:
 - Puede ser sensible a ruido y outliers, especialmente con valores pequeños de k.
 
 
-##**4.2 LDA**
+## *4.2 LDA*
+
 El Análisis Discriminante Lineal (LDA) es un método supervisado que busca combinaciones lineales de las variables que maximizan la separación entre clases, permitiendo reducir la dimensionalidad y clasificar nuevas observaciones de forma eficiente.
 Creamos un dataset para LDA usando los genes escalados y la clase:
 ```{r}
@@ -594,7 +608,8 @@ if (ncol(lda_proj) >= 2) {
 }
 ```
 
-##**4.3 RANDOM FOREST**
+## *4.3 RANDOM FOREST*
+
 Random forest es el método más popular basado en el bagging y consiste crear y  combinar un gran número de árboles de decisión en un gran bosque para obtener una salida más robusta y confiable. Se implementó este algoritmo usando el siguente script:
 ```{r}
 # Renombrar columnas automáticamente para evitar problemas de compatibilidad con los nombres de los genes
@@ -646,11 +661,13 @@ Por otro lado, estos métodos:
 Los resultados obtenidos confirman que la elección de estos tres enfoques fue adecuada para el problema planteado. Los modelos mostraron un rendimiento muy elevado en la clasificación de los cinco tipos de cáncer, con métricas cercanas a la perfección en el conjunto de prueba. Esto indica que los perfiles de expresión génica contienen una señal discriminativa clara y que los métodos seleccionados, pese a sus diferencias conceptuales, son capaces de capturarla de forma eficaz y consistente.
 
 
-#*5. DEEP LEARNING*
+# 5. DEEP LEARNING
+
 Aunque para esta actividad no se aplicará ningún método de deep learning, de tener que elegir un tipo de arquetectura, seleccionariamos una red de perceptrones (MLP). Estas redes están diseñadas para datos tabulates, donde cada gen se modela como una variable independiente de entrada. No requieren estructura adicional que no se encuentre presente en nuestro dataframe. Además, capturan relaciones no lineales entre genes, como hemos demostrtado que lo exige el caso en estudio.
 
 
-#*CONCLUSIÓN DE LA ACTIVIDAD* 
+# CONCLUSIÓN DE LA ACTIVIDAD
+
 En este trabajo se han implementado de forma razonada y sistemática diversas técnicas de aprendizaje no supervisado y supervisado con el objetivo de explorar, distinguir e identificar distintos tipos de cáncer a partir de perfiles de expresión génica. Los métodos no supervisados permitieron analizar la estructura intrínseca de los datos y evaluar la existencia de patrones naturales de agrupamiento, mientras que los métodos supervisados posibilitaron la construcción de modelos predictivos capaces de discriminar entre los cinco tipos de cáncer considerados.
 
 Cada una de las técnicas aplicadas fue analizada en profundidad, evaluando sus supuestos, ventajas y limitaciones, así como su capacidad para separar las distintas clases. En el caso de los métodos supervisados, el rendimiento de los modelos se evaluó mediante métricas adecuadas, como la matriz de confusión, precisión, sensibilidad, especificidad y el estadístico F1.
