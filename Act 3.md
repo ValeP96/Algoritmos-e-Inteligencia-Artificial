@@ -1,5 +1,7 @@
 # Actividad 3. Análisis de un conjunto de datos de origen biológico mediante técnicas de machine learning supervisadas y no supervisadas
 
+Autores: Ana Amador, Carla González, Valeria Pesa y Judit Puntí
+
 ## Introducción
 
 El presente análisis se centra en un dataset que recopila información sobre la expresión de cientos de genes en muestras asociadas a cinco tipos distintos de cáncer:
@@ -37,7 +39,6 @@ library(caret)
 library(pROC)
 library(randomForest)
 library(MASS)
-
 ```
 
 ## Procesamiento de los datos 
@@ -70,10 +71,12 @@ Por lo tanto, no fue necesario aplicar ningún método de imputación.
 Luego, se utilizó la librería skim para realizar una rápida exploración de los datos, incluyendo el calculo de estadísticos descriptivos:
 
 ```{r}
+skim_df <- skim(df)
+
 skim_sd0 <- skim_df %>%
   filter(skim_type == "numeric") %>%
   arrange(numeric.sd) %>%
-  head()
+  head(10)
 ```
 
 Se identificaron 3 genes con desviación estándar igual a cero (sd = 0), es decir, genes cuya expresión es constante en todas las muestras. Estos genes fueron eliminados del análisis, ya que no aportan información discriminativa y pueden causar problemas numéricos en métodos como PCA, LDA o clustering.
@@ -125,6 +128,7 @@ PCA se utilizó como método lineal de referencia para capturar la varianza glob
 
 #### PCA
 El objetivo principal del PCA (Análisis de Componentes Principales) es maximizar la varianza y reducir la dimensionalidad del conjunto de variables. Se caracteriza por combinar linealmente las variables originales y transformarlas en un nuevo conjunto de variables no correlacionadas, conocidas como componentes principales (PC).
+
 ```{r}
 library(stats)
 library(ggplot2)
@@ -249,8 +253,6 @@ tsne_grafica <- ggplot(tsne_df, aes(x = Dim1, y = Dim2, color = Class)) +
 
 tsne_grafica
 ```
-Como se observó en el análisis previo, la mejor separación entre los distintos tipos de cáncer se obtuvo con t-SNE, seguida de LLE. Ambos métodos manejan eficientemente la estructura no lineal de los datos, aunque t-SNE destaca por su capacidad para revelar patrones locales y la estructura global del dataset.
-
 Entre las ventajas de t-SNE se incluyen:
 - Visualización clara de agrupamientos locales incluso en datos con relaciones no lineales.
 - Facilita la detección de subgrupos y patrones en un espacio reducido de dimensión.
@@ -259,6 +261,8 @@ Limitaciones a considerar:
 - La interpretación de distancias globales entre grupos lejanos puede no reflejar similitudes reales.
 - Los resultados dependen de parámetros como perplexity y número de iteraciones, requiriendo ajuste cuidadoso.
 - No genera un modelo aplicable a nuevas muestras; se utiliza únicamente para exploración y visualización.
+
+Como se observó en el análisis previo, la mejor separación entre los distintos tipos de cáncer se obtuvo con t-SNE, seguida de LLE. Ambos métodos manejan eficientemente la estructura no lineal de los datos, aunque t-SNE destaca por su capacidad para revelar patrones locales y la estructura global del dataset.
 
 ### Técnicas de clusterización
 Se aplicaron distintos métodos de clusterización para identificar agrupamientos naturales en los datos de expresión génica. K-means se utilizó sobre la proyección Isomap 2D por su simplicidad y eficiencia, fijando el número de clústeres según las clases reales.
@@ -693,49 +697,6 @@ metrics_rf
 
 Como puede observarse, la presición, sensibilidad, especificidad y F1 son iguales o cercanos a 1 en todos los casos, indicando la excelente capacidad del modelo para clasificar los tipos de cáncer en base a la expresión génica. 
 
-Esto tambien puede evidenciarse en las curvas ROC, las cuales fueron calculadas con sel siguiente script, mediante una estrategia one-vs-rest para cada clase, utilizando las probabilidades predichas por el modelo Random Forest. Los valores de AUC iguales a 1 demuestran también la excelente capacidad discriminativa de este modelo.
-
-```{r}
-test_x <- testData[, !names(testData) %in% "Class"]
-
-rf_prob <- predict(
-  rf_model,
-  newdata = test_x,
-  type = "prob"
-)
-classes <- levels(testData$Class)
-
-roc_list <- lapply(classes, function(cl) {
-  roc(
-    response = as.numeric(testData$Class == cl),
-    predictor = rf_prob[, cl],
-    quiet = TRUE
-  )
-})
-
-names(roc_list) <- classes
-
-plot(
-  roc_list[[1]],
-  col = 1,
-  lwd = 2,
-  main = "Curvas ROC – Random Forest (One-vs-Rest)"
-)
-
-for (i in 2:length(roc_list)) {
-  plot(roc_list[[i]], col = i, lwd = 2, add = TRUE)
-}
-
-legend(
-  "bottomright",
-  legend = paste0(classes, " (AUC = ",
-                  round(sapply(roc_list, auc), 3), ")"),
-  col = 1:length(classes),
-  lwd = 2,
-  cex = 0.9
-)
-```
-
 Los métodos de bagging, como lo es el Random Forest, tienen como ventaja que:
 
 * Presentan una reducción de la varianza, lo que puede mejorar la capacidad de generalización y hacer que las predicciones sean más estables;
@@ -751,3 +712,11 @@ Por otro lado, estos métodos:
 ## Deep learning
 
 Aunque para esta actividad no se aplicará ningún método de deep learning, de tener que elegir un tipo de arquetectura, seleccionariamos una red de perceptrones (MLP). Estas redes están diseñadas para datos tabulates, donde cada gen se modela como una variable independiente de entrada. No requieren estructura adicional que no se encuentre presente en nuestro dataframe. Además, capturan relaciones no lineales entre genes, como hemos demostrtado que lo exige el caso en estudio.
+
+## Conclusión
+
+En este trabajo se han implementado de forma razonada y sistemática diversas técnicas de aprendizaje no supervisado y supervisado con el objetivo de explorar, distinguir e identificar distintos tipos de cáncer a partir de perfiles de expresión génica. Los métodos no supervisados permitieron analizar la estructura intrínseca de los datos y evaluar la existencia de patrones naturales de agrupamiento, mientras que los métodos supervisados posibilitaron la construcción de modelos predictivos capaces de discriminar entre los cinco tipos de cáncer considerados.
+
+Cada una de las técnicas aplicadas fue analizada en profundidad, evaluando sus supuestos, ventajas y limitaciones, así como su capacidad para separar las distintas clases. En el caso de los métodos supervisados, el rendimiento de los modelos se evaluó mediante métricas adecuadas, como la matriz de confusión, precisión, sensibilidad, especificidad y el estadístico F1.
+
+Desde una perspectiva clínica, los enfoques propuestos podrían constituir una herramienta complementaria de apoyo al diagnóstico, al facilitar la clasificación de muestras en función de su perfil de expresión génica. No obstante, aunque los modelos muestran un rendimiento satisfactorio en el conjunto de prueba, su posible aplicación en un entorno real requeriría una validación adicional en cohortes independientes y más heterogéneas, así como una evaluación de su robustez frente a variaciones técnicas y biológicas.
