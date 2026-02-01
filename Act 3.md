@@ -6,7 +6,7 @@ El presente análisis se centra en un dataset que recopila información sobre la
 
 * AGH
 * CHC
-* HPB: Hiperplasia Benigna de Próstata
+* HPB
 * CGC
 * CFB           
 
@@ -120,11 +120,6 @@ heatmap50 <- pheatmap(
 ### Técnicas de reducción de dimensionalidad
 
 Se implementaron y evaluaron cuatro métodos de aprendizaje no supervisado de reducción de dimensionalidad: PCA, isomap, LLE y t-SNE.
-
-•	PCA → Carla
-•	Isomap → Anna
-•	LLE → Valeria
-•	t-SNE → Judit
 
 #### PCA
 ```{r}
