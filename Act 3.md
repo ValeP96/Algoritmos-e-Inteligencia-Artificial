@@ -95,8 +95,8 @@ df_scaled <- df_filter %>%
 
 El escalado elimina diferencias de magnitud entre genes, reduce el impacto de valores altos, y es esencial para alguno de los métodos utilizados a continuación. 
 
-#### HEATMAP
-Hacemos un heatmap para ver la expresion de los genes
+#### Heatmap
+Para tener una visión de la expresión de los genes se hace un heatmap, en este caso solo de 50 genes para que sea más clara la visualización
 ```{r}
 varianza <- apply(df_numeric, 2, var, na.rm = TRUE) #nos quedamos con los que mayor varianza tengan
 top_genes100 <- names(sort(varianza, decreasing = TRUE))[1:100] #acotamos primero a 100 genes, y probamos
