@@ -96,7 +96,7 @@ df_scaled <- df_filter %>%
 El escalado elimina diferencias de magnitud entre genes, reduce el impacto de valores altos, y es esencial para alguno de los métodos utilizados a continuación. 
 
 #### Heatmap
-Para tener una visión de la expresión de los genes se hace un heatmap, en este caso solo de 50 genes para que sea más clara la visualización
+Para tener una visión de la expresión de los genes se hace un heatmap, en este caso solo de 50 genes para que sea más clara la visualización.
 ```{r}
 varianza <- apply(df_numeric, 2, var, na.rm = TRUE) #nos quedamos con los que mayor varianza tengan
 top_genes100 <- names(sort(varianza, decreasing = TRUE))[1:100] #acotamos primero a 100 genes, y probamos
@@ -124,6 +124,7 @@ Se implementaron cuatro métodos no supervisados de reducción de dimensionalida
 PCA se utilizó como método lineal de referencia para capturar la varianza global de los datos. Isomap se seleccionó por su capacidad para preservar la estructura global en datos no lineales, LLE por mantener las relaciones locales entre muestras, y t-SNE por su elevada capacidad para visualizar agrupamientos locales y separar clases en espacios de baja dimensión.
 
 #### PCA
+El objetivo principal del PCA (Análisis de Componentes Principales) es maximizar la varianza y reducir la dimensionalidad del conjunto de variables. Se caracteriza por combinar linealmente las variables originales y transformarlas en un nuevo conjunto de variables no correlacionadas, conocidas como componentes principales (PC).
 ```{r}
 library(stats)
 library(ggplot2)
@@ -191,7 +192,6 @@ ggplot(isomap.df, aes(Dim1, Dim2, color = class)) +
 La graficicación obtenida mediante Isomap (k = 10) muestra una separación clara entre la mayoría de las clases analizadas. La clase AGH aparece claramente aislada del resto, mientras que CFB forma un clúster amplio y bien definido. Por el contrario, las clases CGC y HPB presentan cierta proximidad y solapamiento, lo que sugiere similitudes en sus patrones de expresión génica. En conjunto, Isomap captura de forma eficaz la estructura no lineal de los datos, proporcionando una representación más informativa que métodos lineales como PCA.
 
 #### Locally linear embedding (LLE)
-
 El LLE es un algoritmo altamente eficiente en descubrir las estructuras no lineales en los datos y preservar las distancias dentro del vecindario local. El LLE presenta ciertas limitaciones, pues es muy sensible al ruido y a los valores atípicos. Además, es posible que dos puntos de datos, que en realidad no se encuentren en el mismo parche localmente lineal, sean agrupados como si lo estuvieran.
 
 El número de vecinos, k, es su único parámetro libre, lo que simplifica el ajuste el algoritmo. En esta ocación fueron evaluados varios valores de k entre 10 y 80, seleccionando 50 como el óptimo. El algoritmo se implementó de la siguiente manera:
@@ -470,7 +470,7 @@ La exactitud global (Accuracy) del modelo fue del 99,37%, y el Kappa = 0,992 evi
 
 Por clase, las métricas muestran sensibilidades y especificidades cercanas al 100%, indicando que el modelo es capaz de discriminar con fiabilidad cada tipo de cáncer, con un número muy reducido de falsos positivos y falsos negativos.
 
-Graficamos la curva ROC para cada tipo de cáncer
+Graficamos la curva ROC para cada tipo de cáncer:
 ```{r}
 # Lista para guardar los ggplots de k-NN
 roc_knn_plots <- list()
@@ -521,7 +521,7 @@ Y las limitaciones:
 #### LDA
 El Análisis Discriminante Lineal (LDA) es un método supervisado que busca combinaciones lineales de las variables que maximizan la separación entre clases, permitiendo reducir la dimensionalidad y clasificar nuevas observaciones de forma eficiente.
 
-Creamos un dataset para LDA usando los genes escalados y la clase
+Creamos un dataset para LDA usando los genes escalados y la clase:
 ```{r}
 df_lda <- data.frame(
   class = df_filter$class,
@@ -529,21 +529,20 @@ df_lda <- data.frame(
 )
 df_lda$class <- as.factor(df_lda$class)
 ```
-
-#Partición train/test (80/20 estratificada)
+Código de partición train/test (80/20 estratificada):
 ```{r}
 set.seed(123)
 idx_train <- createDataPartition(df_lda$class, p = 0.80, list = FALSE)
 train_df <- df_lda[idx_train, ]
 test_df <- df_lda[-idx_train, ]
 ```
-Entrenamos el modelo y predeccimos 
+Entrenamos el modelo y predeccimos :
 ```{r}
 lda_model <- lda(class ~ ., data = train_df)
 lda_pred_train <- predict(lda_model, newdata = train_df)
 lda_pred_test <- predict(lda_model, newdata = test_df)
 ```
-Miramos la matriz de confusión
+Miramos la matriz de confusión:
 ```{r}
 confusion <- confusionMatrix(lda_pred_test$class, test_df$class)
 print(confusion)
@@ -564,7 +563,7 @@ La exactitud balanceada combina sensibilidad y especificidad, siendo especialmen
 
 Las métricas de prevalencia y tasa de detección reflejan la distribución desigual de las clases en el conjunto de datos, siendo CFB la clase más representada y HPB la menos frecuente. A pesar de este desbalance, el modelo mantiene un rendimiento elevado en todas las clases.
 
-Graficamos 
+Graficamos:
 ```{r}
 lda_proj <- lda_pred_train$x
 lda_plot_df <- cbind(train_df[, "class", drop = FALSE], as.data.frame(lda_proj))
