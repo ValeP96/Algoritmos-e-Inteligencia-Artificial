@@ -262,7 +262,7 @@ Limitaciones a considerar:
 - Los resultados dependen de parámetros como perplexity y número de iteraciones, requiriendo ajuste cuidadoso.
 - No genera un modelo aplicable a nuevas muestras; se utiliza únicamente para exploración y visualización.
 
-Como se observó en el análisis previo, la mejor separación entre los distintos tipos de cáncer se obtuvo con t-SNE, seguida de LLE. Ambos métodos manejan eficientemente la estructura no lineal de los datos, aunque t-SNE destaca por su capacidad para revelar patrones locales y la estructura global del dataset.
+Como se observó en el análisis previo, la mejor separación entre los distintos tipos de cáncer se obtuvo con t-SNE, seguida de LLE. Ambos métodos permiten capturar eficazmente la estructura no lineal de los datos, si bien t-SNE destaca por su mayor capacidad para revelar patrones locales y preservar la organización global del conjunto de datos.
 
 ### Técnicas de clusterización
 Se aplicaron distintos métodos de clusterización para identificar agrupamientos naturales en los datos de expresión génica. K-means se utilizó sobre la proyección Isomap 2D por su simplicidad y eficiencia, fijando el número de clústeres según las clases reales.
@@ -412,8 +412,12 @@ clust_diana_euclidean <- fviz_dend(diana_euclidean,
                                   ylab = "Distancia") + theme_classic()
 clust_diana_euclidean
 ```
+
 ## Métodos supervisados 
-La elección de los métodos k-NN, LDA y Random Forest se realizó con el objetivo de comparar enfoques supervisados complementarios. El método k-NN se seleccionó por su simplicidad y por su capacidad para capturar relaciones locales entre muestras sin asumir una forma funcional previa de los datos. LDA se incluyó como un método estadístico clásico, adecuado para evaluar la separabilidad entre clases bajo supuestos de normalidad y varianzas homogéneas, sirviendo además como una referencia interpretable. Finalmente, Random Forest se empleó por su capacidad para modelar relaciones no lineales complejas, su robustez frente al ruido y su buen rendimiento en conjuntos de datos con un gran número de variables.
+
+Se implementaron tres métodos de aprendizaje supervisado: k-NN, LDA y Random Forest. Su elección se realizó con el objetivo de comparar enfoques supervisados complementarios. El método k-NN se seleccionó por su simplicidad y por su capacidad para capturar relaciones locales entre muestras sin asumir una forma funcional previa de los datos. LDA se incluyó como un método estadístico clásico, adecuado para evaluar la separabilidad entre clases bajo supuestos de normalidad y varianzas homogéneas, sirviendo además como una referencia interpretable. Finalmente, Random Forest se empleó por su capacidad para modelar relaciones no lineales complejas, su robustez frente al ruido y su buen rendimiento en conjuntos de datos con un gran número de variables.
+
+Se decidió no aplicar técnicas explícitas de reducción de dimensionalidad antes del entrenamiento de los métodos. Esta decisión se basó en el filtrado previo de genes sin variabilidad y en el escalado de los datos, así como en el uso de modelos robustos frente a espacios de alta dimensionalidad, como Random Forest. Además, se priorizó la interpretabilidad de las variables originales, ya que métodos como PCA dificultan la identificación directa de genes relevantes.
 
 Los métodos supervisados deben ser evaluados para comprobar su capacidad de generalización y su rendimiento sobre datos no vistos. Para ello, el conjunto de datos se dividió en un conjunto de entrenamiento y otro de prueba, utilizando el 80% de las muestras para el entrenamiento y el 20% restante para la validación del modelo.
 
@@ -708,6 +712,8 @@ Por otro lado, estos métodos:
 * Suelen ser computacionalmente más costosos;
 * Pueden ser más dificiles de interpretar;
 * Presentan un riesgo de sobreajuste cuando los modelos de base individuales están sobreajustados a los datos de entrenamiento.
+
+Los resultados obtenidos confirman que la elección de estos tres enfoques fue adecuada para el problema planteado. Los modelos mostraron un rendimiento muy elevado en la clasificación de los cinco tipos de cáncer, con métricas cercanas a la perfección en el conjunto de prueba. Esto indica que los perfiles de expresión génica contienen una señal discriminativa clara y que los métodos seleccionados, pese a sus diferencias conceptuales, son capaces de capturarla de forma eficaz y consistente.
 
 ## Deep learning
 
