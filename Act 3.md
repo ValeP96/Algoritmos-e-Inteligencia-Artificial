@@ -167,18 +167,20 @@ ISOMAP es un algoritmo eficaz para descubrir estructuras no lineales en conjunto
 El número de vecinos está representado por el número k. En este caso, se escogió el valor de k=10 ya que nos permitía visualizar mejor graficamente las relaciones locales entre las diferentes clases. 
 ```{r}
 set.seed(123)
-X <- as.matrix(df_scaled[, -1])
-y   <- df_filter$class
+X <- as.matrix(df_scaled)
+y   <- df_filter$Class
+isomap.results <- Isomap(data = X, dims = 1:10, k = 10, plotResiduals = TRUE)
 
+#sacamos el dataframe de isomap con 2 dimensiones, pero sabemos que la gráfica se empieza a aplanar con 4. 
 isomap.df <- data.frame(
-  Dim1  = isomap.results$dim2[, 1],
-  Dim2  = isomap.results$dim2[, 2],
+  X1 = isomap.results$dim2[, 1],
+  X2 = isomap.results$dim2[, 2],
   class = y
 )
 ```
 Para graficar, se utilizó el siguiente código:
 ```{r}
-ggplot(isomap.df, aes(Dim1, Dim2, color = class)) +
+ggplot(isomap.df, aes(x = X1, y = X2, color = y)) +
   geom_point(size = 2.5, alpha = 0.85) +
   labs(
     title = "Isomap (k = 10)",
@@ -197,17 +199,19 @@ El LLE es un algoritmo altamente eficiente en descubrir las estructuras no linea
 El número de vecinos, k, es su único parámetro libre, lo que simplifica el ajuste el algoritmo. En esta ocación fueron evaluados varios valores de k entre 10 y 80, seleccionando 50 como el óptimo. El algoritmo se implementó de la siguiente manera:
 
 ```{r}
+#convertir df_scaled a matriz numerica
+df_matriz_scaled <- as.matrix(df_scaled)
 lle.results.50 <- LLE(df_scaled, dim = 2, k = 50) # La dimensión final es 2, ya que son las dos que se van a representar gráficamente
 
 lle.df.50 <- data.frame(lle.results.50) # Creación de un dataframe a partir de los resultados
 
-lle.df.50$class <- df$class # Incorporación de la columna especificando los tipos de cáncer
+lle.df.50$Class <- df_filter$Class # Incorporación de la columna especificando los tipos de cáncer
 ```
 
 Para la representación gráfica, se utilizó el siguiente código:
 
 ```{r}
-plot_LLE_50 <- ggplot(lle.df.50, aes(x = X1, y = X2, color = class)) +
+plot_LLE_50 <- ggplot(lle.df.50, aes(x = X1, y = X2, color = Class)) +
   geom_point(size = 3) +
   scale_color_manual(values = rainbow(5)) +
   labs(title = "Método LLE", x = "X1", y = "X2") +
@@ -270,7 +274,7 @@ k <- length(unique(y))                           # Calcula k como el nº de clas
 
 # Aplicación de K-means sobre las dos dimensiones de Isomap
 km <- kmeans(
-  isomap.df[, c("Dim1", "Dim2")],                # Datos 2D obtenidos con Isomap
+  isomap.df[, c("X1", "X2")],                # Datos 2D obtenidos con Isomap
   centers = k,                                   # Número de clusters
   nstart = 25                                    # Nº de inicializaciones aleatorias
 )
@@ -411,8 +415,16 @@ Los métodos supervisados deben ser evaluados para comprobar su capacidad de gen
 
 ```{r}
 set.seed(2026) # Reproducibilidad
-train_index <- createDataPartition(df_filter$class, p = 0.8, list = FALSE) # 80% de prueba
-
+#le pongo el nombre de Class a la segunda columna del data_final, que no la tiene
+#voy a trabajar con la base de datos df_filter, sin escalar porque el hiperparametro preprocess ya va a escalar los datos. 
+#Como en esta base de datos tengo la columna sample, la elimino
+df_filter$sample_0 <-NULL
+colnames(df_filter)[1] <- "Class"
+trainIndex <- createDataPartition(df_filter$Class, p = 0.8, list = FALSE)
+df_filter$Class <- as.factor(df_filter$Class)
+trainData <- df_filter[trainIndex,]
+testData <- df_filter[-trainIndex,]
+#DECIDIR SI LO DE ARRIBA O LO DE ABAJO 
 ## Dividimos datos en entrenamiento y test según los índices.
 train_data <- df_filter[train_index, ]
 test_data <- df_filter[-train_index, ]
@@ -472,16 +484,12 @@ Por clase, las métricas muestran sensibilidades y especificidades cercanas al 1
 
 Graficamos la curva ROC para cada tipo de cáncer:
 ```{r}
+#Este codigo no saleeeeeeeeeeeeeeeeeeeeee
 # Lista para guardar los ggplots de k-NN
 roc_knn_plots <- list()
 
 # Loop sobre cada clase
-for (cls in levels(df_filter$class)) {
-  
-  # ROC one-vs-all para k-NN
-  roc_knn_obj <- roc(as.numeric(test_data_scaled$class == cls), probabilities[, cls])
-  
-  # Dataframe para ggplot
+for (cls in levels(df_filter$class)) {roc_knn_obj <- roc(as.numeric(testData$class == cls), probabilities[, cls])
   roc_knn_df <- data.frame(
     FPR = 1 - roc_knn_obj$specificities,
     TPR = roc_knn_obj$sensitivities
@@ -503,9 +511,58 @@ for (cls in levels(df_filter$class)) {
   
   roc_knn_plots[[cls]] <- p_knn
 }
+#Este codigo no saleeeeeeeeeeeeeeeeeeeeee
 
-# Unir los gráficos k-NN en una sola figura
-roc_knn_combined <- wrap_plots(roc_knn_plots, ncol = 3)
+library(pROC)
+library(ggplot2)
+library(patchwork)
+
+# 1. Crear objeto ROC multiclase
+roc_multi <- multiclass.roc(testData$Class, probabilities)
+
+# 2. Extraer las curvas binarizadas (uno contra todos)
+rocs <- roc_multi$rocs
+
+# 3. Cada curva está dentro de una lista anidada
+roc_A <- rocs[[1]][[1]]
+roc_B <- rocs[[2]][[1]]
+roc_C <- rocs[[3]][[1]]
+roc_D <- rocs[[4]][[1]]# si tienes 3 clases
+roc_E <- rocs[[5]][[1]]
+
+#asegurarnos el orden de las clases
+colnames(probabilities)
+# 4. Crear gráficos individuales SIN bucles
+pA <- ggroc(roc_A, colour = "blue", size = 1.2) +
+  ggtitle("ROC k-NN: Clase AGH") +
+  annotate("text", x = 0.6, y = 0.1,
+           label = paste("AUC =", round(auc(roc_A), 3)),
+           color = "blue", size = 5)
+
+pB <- ggroc(roc_B, colour = "red", size = 1.2) +
+  ggtitle("ROC k-NN: Clase CFB") +
+  annotate("text", x = 0.6, y = 0.1,
+           label = paste("AUC =", round(auc(roc_B), 3)),
+           color = "red", size = 5)
+
+pC <- ggroc(roc_C, colour = "green", size = 1.2) +
+  ggtitle("ROC k-NN: Clase CGC") +
+  annotate("text", x = 0.6, y = 0.1,
+           label = paste("AUC =", round(auc(roc_C), 3)),
+           color = "green", size = 5)
+pD <- ggroc(roc_D, colour = "purple", size = 1.2) +
+  ggtitle("ROC k-NN: Clase CHC") +
+  annotate("text", x = 0.6, y = 0.1,
+           label = paste("AUC =", round(auc(roc_D), 3)),
+           color = "purple", size = 5)
+pE <- ggroc(roc_E, colour = "yellow", size = 1.2) +
+  ggtitle("ROC k-NN: Clase HPB") +
+  annotate("text", x = 0.6, y = 0.1,
+           label = paste("AUC =", round(auc(roc_E), 3)),
+           color = "yellow", size = 5)
+
+# 5. Combinar sin bucles
+roc_knn_combined <- pA + pB + pC + pD + pE
 roc_knn_combined
 ```
 Las curvas ROC y los valores de AUC por clase confirman que el modelo k-NN posee una capacidad casi perfecta para diferenciar cada categoría, mostrando un rendimiento robusto y consistente incluso en un escenario multiclase.
@@ -524,27 +581,27 @@ El Análisis Discriminante Lineal (LDA) es un método supervisado que busca comb
 Creamos un dataset para LDA usando los genes escalados y la clase:
 ```{r}
 df_lda <- data.frame(
-  class = df_filter$class,
+  Class = df_filter$Class,
   df_scaled
 )
-df_lda$class <- as.factor(df_lda$class)
+df_lda$Class <- as.factor(df_lda$Class)
 ```
 Código de partición train/test (80/20 estratificada):
 ```{r}
 set.seed(123)
-idx_train <- createDataPartition(df_lda$class, p = 0.80, list = FALSE)
+idx_train <- createDataPartition(df_lda$Class, p = 0.80, list = FALSE)
 train_df <- df_lda[idx_train, ]
 test_df <- df_lda[-idx_train, ]
 ```
 Entrenamos el modelo y predeccimos :
 ```{r}
-lda_model <- lda(class ~ ., data = train_df)
+lda_model <- lda(Class ~ ., data = train_df)
 lda_pred_train <- predict(lda_model, newdata = train_df)
 lda_pred_test <- predict(lda_model, newdata = test_df)
 ```
 Miramos la matriz de confusión:
 ```{r}
-confusion <- confusionMatrix(lda_pred_test$class, test_df$class)
+confusion <- confusionMatrix(lda_pred_test$class, lda_pred_test$class)
 print(confusion)
 ```
 Como se puede observar, la tabla muestra las métricas de rendimiento del modelo LDA evaluado sobre el conjunto de test, desglosadas por cada una de las clases (AGH, CFB, CGC, CHC y HPB):
@@ -566,11 +623,11 @@ Las métricas de prevalencia y tasa de detección reflejan la distribución desi
 Graficamos:
 ```{r}
 lda_proj <- lda_pred_train$x
-lda_plot_df <- cbind(train_df[, "class", drop = FALSE], as.data.frame(lda_proj))
+lda_plot_df <- cbind(train_df[, "Class", drop = FALSE], as.data.frame(lda_proj))
 
 if (ncol(lda_proj) >= 2) {
   
-  ggplot(lda_plot_df, aes(LD1, LD2, color = class)) +
+  ggplot(lda_plot_df, aes(LD1, LD2, color = Class)) +
     geom_point(size = 2.2, alpha = 0.85) +
     labs(
       title = "LDA - Proyección en funciones discriminantes (TRAIN)",
@@ -583,7 +640,7 @@ if (ncol(lda_proj) >= 2) {
   
 } else {
   
-  ggplot(lda_plot_df, aes(LD1, 0, color = class)) +
+  ggplot(lda_plot_df, aes(LD1, 0, color = Class)) +
     geom_jitter(height = 0.06, size = 2.2, alpha = 0.85) +
     labs(
       title = "LDA - Proyección (solo LD1, TRAIN)",
@@ -606,24 +663,23 @@ Random forest es el método más popular basado en el bagging y consiste crear y
 
 ```{r}
 # Renombrar columnas automáticamente para evitar problemas de compatibilidad con los nombres de los genes
-names(train_data_scaled) <- make.names(names(train_data_scaled))
-names(test_data_scaled)  <- make.names(names(test_data_scaled))
+names(trainData) <- make.names(names(trainData))
+names(testData)  <- make.names(names(testData))
 
 # Entrenar modelo
 set.seed(2026)
-rf_model <- randomForest(class ~ .,
-                          data = train_data_scaled,
+rf_model <- randomForest(Class ~ .,
+                          data = trainData,
                           ntree = 500, # Suficiente número de árboles para estabilidad
                           mtry = 20) # Número de variables muestreadas al azar como candidatas en cada división
+rf_model
 
-# Predicción
-rf_pred <- predict(rf_model, newdata = test_data_scaled)
-```
-
-Para evaluar el modelo, se realizó una matriz de confusióm: 
+Para evaluar el modelo, se realizó una matriz de confusión con las predicciones: 
 
 ```{r}
-cm_rf <- confusionMatrix(rf_pred, test_data_scaled$class)
+# Predicción
+rf_pred <- predict(rf_model, newdata = testData)
+cm_rf <- confusionMatrix(rf_pred, testData$Class)
 cm_rf
 ```
 Los resultados obtenidos en este algoritmo son excelentes, mostrando una única clasificación incorrecta. 
@@ -640,18 +696,18 @@ Como puede observarse, la presición, sensibilidad, especificidad y F1 son igual
 Esto tambien puede evidenciarse en las curvas ROC, las cuales fueron calculadas con sel siguiente script, mediante una estrategia one-vs-rest para cada clase, utilizando las probabilidades predichas por el modelo Random Forest. Los valores de AUC iguales a 1 demuestran también la excelente capacidad discriminativa de este modelo.
 
 ```{r}
-test_x <- test_data_scaled[, !names(test_data_scaled) %in% "class"]
+test_x <- testData[, !names(testData) %in% "Class"]
 
 rf_prob <- predict(
   rf_model,
   newdata = test_x,
   type = "prob"
 )
-classes <- levels(test_data_scaled$class)
+classes <- levels(testData$Class)
 
 roc_list <- lapply(classes, function(cl) {
   roc(
-    response = as.numeric(test_data_scaled$class == cl),
+    response = as.numeric(testData$Class == cl),
     predictor = rf_prob[, cl],
     quiet = TRUE
   )
