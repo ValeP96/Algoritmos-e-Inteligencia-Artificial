@@ -119,7 +119,9 @@ heatmap50 <- pheatmap(
 
 ### Técnicas de reducción de dimensionalidad
 
-Se implementaron y evaluaron cuatro métodos de aprendizaje no supervisado de reducción de dimensionalidad: PCA, isomap, LLE y t-SNE.
+Se implementaron cuatro métodos no supervisados de reducción de dimensionalidad (PCA, Isomap, LLE y t-SNE) con el objetivo de explorar la estructura interna del conjunto de datos y evaluar su capacidad para revelar patrones y agrupamientos entre los distintos tipos de cáncer. Estos métodos fueron seleccionados por ofrecer enfoques complementarios, tanto lineales como no lineales, adecuados para datos de expresión génica con relaciones complejas.
+
+PCA se utilizó como método lineal de referencia para capturar la varianza global de los datos. Isomap se seleccionó por su capacidad para preservar la estructura global en datos no lineales, LLE por mantener las relaciones locales entre muestras, y t-SNE por su elevada capacidad para visualizar agrupamientos locales y separar clases en espacios de baja dimensión.
 
 #### PCA
 ```{r}
@@ -255,10 +257,11 @@ Limitaciones a considerar:
 - No genera un modelo aplicable a nuevas muestras; se utiliza únicamente para exploración y visualización..
 
 ### Técnicas de clusterización
-k-means -> Ana
-•	Jerarquico → Carla
+Se aplicaron distintos métodos de clusterización para identificar agrupamientos naturales en los datos de expresión génica. K-means se utilizó sobre la proyección Isomap 2D por su simplicidad y eficiencia, fijando el número de clústeres según las clases reales.
 
-TÉCNICAS DE CLUSTERIZACIÓN JERÁRQUICO (WARD) sobre Isomap 
+Además, se emplearon métodos jerárquicos aglomerativos (single, complete, average y Ward) y el método divisivo DIANA sobre los genes de mayor varianza para reducir ruido y explorar la estructura de los datos desde enfoques complementarios.
+
+#### Técnicas de clusterización jerárquico (WARD) sobre isomap 
 ```{r}
 set.seed(123)                                    # Fija la semilla para reproducibilidad
 
@@ -316,7 +319,7 @@ ggplot(isomap.df, aes(Dim1, Dim2, color = cluster_km)) +
 El algoritmo K-means aplicado sobre la proyección Isomap 2D identifica cinco clústeres bien definidos, con escaso solapamiento y una clara diferenciación espacial entre los grupos.
 
 
-CLUSTERIZACION AGLOMERATIVA
+#### Clusterización aglomerativa
 Como 800 genes no nos da resultado de nada, vamos a hacer las mismas técnicas con los 50 genes selecionados con mas varianza
 Reduzco a 50 genes.
 ```{r}
@@ -388,7 +391,7 @@ library(gridExtra)
 dendogramas_todos <- grid.arrange(clust_single, clust_complete, clust_average, clust_ward, nrow = 2)
 dendogramas_todos
 ```
-2) CLUSTERIZACION DECISIVA: DIANA
+#### Clusterización decisiva: DIANA
 ```{r}
 library(cluster)
 diana_euclidean <- diana(df_scaled, metric = "euclidean", stand = F)
@@ -402,8 +405,9 @@ clust_diana_euclidean <- fviz_dend(diana_euclidean,
 clust_diana_euclidean
 ```
 ## Métodos supervisados 
+La elección de los métodos k-NN, LDA y Random Forest se realizó con el objetivo de comparar enfoques supervisados complementarios. El método k-NN se seleccionó por su simplicidad y por su capacidad para capturar relaciones locales entre muestras sin asumir una forma funcional previa de los datos. LDA se incluyó como un método estadístico clásico, adecuado para evaluar la separabilidad entre clases bajo supuestos de normalidad y varianzas homogéneas, sirviendo además como una referencia interpretable. Finalmente, Random Forest se empleó por su capacidad para modelar relaciones no lineales complejas, su robustez frente al ruido y su buen rendimiento en conjuntos de datos con un gran número de variables.
 
-Los métodos supervisados necesitan ser puestos a prueba y evaluados para confirmar que funcione correctamente con datos nuevos y que pueda generar resultados precisos. Luego, el conjunto de datos debe ser dividido en datos de entrenamiento y datos de prueba. En esta ocación utilizamos el 80% de los datos para el entrenamiento, y el 20% restante para la prueba, aplicando el siguiente código:
+Los métodos supervisados deben ser evaluados para comprobar su capacidad de generalización y su rendimiento sobre datos no vistos. Para ello, el conjunto de datos se dividió en un conjunto de entrenamiento y otro de prueba, utilizando el 80% de las muestras para el entrenamiento y el 20% restante para la validación del modelo.
 
 ```{r}
 set.seed(2026) # Reproducibilidad
@@ -466,8 +470,8 @@ La exactitud global (Accuracy) del modelo fue del 99,37%, y el Kappa = 0,992 evi
 
 Por clase, las métricas muestran sensibilidades y especificidades cercanas al 100%, indicando que el modelo es capaz de discriminar con fiabilidad cada tipo de cáncer, con un número muy reducido de falsos positivos y falsos negativos.
 
+Graficamos la curva ROC para cada tipo de cáncer
 ```{r}
-# GRAFICAMOS LA CURVA ROC PARA CADA TIPO DE CÁNCER
 # Lista para guardar los ggplots de k-NN
 roc_knn_plots <- list()
 
