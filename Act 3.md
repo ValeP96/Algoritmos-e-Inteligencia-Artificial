@@ -162,9 +162,17 @@ pca_grafica
 En la técnica de analisis de componentes principales (PCA) podemos ver como la clase AGH se diferencia notablemente de las demás con el primer componente. Sin embargo, el resto de clases no se diferencian teniendo en cuenta estos dos componentes, por lo que esta técnica quedaría limitada para dar unos resultados concluyentes, posiblemente porque las variables no estén muy correlacionadas y se necesite un mayor numero de componentes que maximicen la varianza entre las diferentes variables. 
 
 #### Isomap
-ISOMAP es un algoritmo eficaz para descubrir estructuras no lineales en conjuntos de datos de alta dimensionalidad, ya que busca preservar las distancias geodésicas entre los puntos, es decir, las distancias a lo largo de la variedad subyacente. Este método extiende el Análisis de Componentes Principales (PCA) a contextos no lineales mediante la construcción de un grafo de vecinos y el cálculo de las distancias más cortas entre ellos. No obstante, ISOMAP presenta ciertas limitaciones, como su sensibilidad a la elección del número de vecinos y a la presencia de ruido, lo que puede provocar distorsiones en la estimación de las distancias y afectar a la calidad de la proyección final.
+ISOMAP es un algoritmo eficaz para descubrir estructuras no lineales en conjuntos de datos de alta dimensionalidad, ya que busca preservar las distancias geodésicas entre los puntos, es decir, las distancias a lo largo de la variedad subyacente. Este método extiende el Análisis de Componentes Principales (PCA) a contextos no lineales mediante la construcción de un grafo de vecinos y el cálculo de las distancias más cortas entre ellos.
+
+La ventaja principal de este método es que es especialmente eficaz para conjuntos de datos cuyas variables mantienen relaciones no lineales. 
+
+También presenta dos principales limitaciones:
+Por un lado, se necesita una densidad suficiente de putos en el espacio de alta dimension para determinar sus distancias dandose el caso de que  las distancias en el espacio de menor dimensión podrían ser muy diferentes a las distancias en el espacio original.
+
+Por otro lado, encontrar el parámetro k correcto, incluso si existe, es muy difícil. Si para el vecino más cercano es demasiado pequeño, es posible que el grafo ni siquiera esté conectado y, si es grande, el grafo podría ser demasiado denso, lo que nos lleva a determinar distancias incorrectas.
 
 El número de vecinos está representado por el número k. En este caso, se escogió el valor de k=10 ya que nos permitía visualizar mejor graficamente las relaciones locales entre las diferentes clases. 
+
 ```{r}
 set.seed(123)
 X <- as.matrix(df_scaled[, -1])
@@ -289,32 +297,32 @@ hulls <- isomap.df %>%
 ggplot(isomap.df, aes(Dim1, Dim2, color = cluster_km)) +
   
   geom_polygon(                                  # Dibuja los polígonos de cada clúster
-    data = hulls,                                # Usa solo los puntos frontera
-    aes(fill = cluster_km, group = cluster_km),  # Relleno y agrupación por clúster
-    alpha = 0.2,                                 # Transparencia del polígono
-    color = NA                                   # Sin borde para el polígono
+    data = hulls,                              
+    aes(fill = cluster_km, group = cluster_km),  
+    alpha = 0.2,                                
+    color = NA                                   
   ) +
   
-  geom_path(                                     # Dibuja el contorno del polígono
+  geom_path(                                    
     data = hulls,
     aes(group = cluster_km),
-    linewidth = 0.8                              # Grosor del borde
+    linewidth = 0.8                              
   ) +
   
-  geom_point(                                    # Dibuja las muestras individuales
-    size = 2,                                    # Tamaño de los puntos
-    alpha = 0.85                                 # Transparencia ligera
+  geom_point(                                    
+    size = 2,                                   
+    alpha = 0.85                                
   ) +
   
   labs(
-    title = paste0("K-Means plot, centros = ", k), # Título del gráfico
-    x = "Isomap - Dimensión 1",                     # Etiqueta eje X
-    y = "Isomap - Dimensión 2",                     # Etiqueta eje Y
-    color = "Cluster",                              # Leyenda del color
-    fill  = "Cluster"                               # Leyenda del relleno
+    title = paste0("K-Means plot, centros = ", k),
+    x = "Isomap - Dimensión 1",                     
+    y = "Isomap - Dimensión 2",                     
+    color = "Cluster",                            
+    fill  = "Cluster"                              
   ) +
   
-  theme_minimal()                                # Tema visual limpio y académico
+  theme_minimal()                              
 ```
 El algoritmo K-means aplicado sobre la proyección Isomap 2D identifica cinco clústeres bien definidos, con escaso solapamiento y una clara diferenciación espacial entre los grupos.
 
@@ -521,6 +529,11 @@ Y las limitaciones:
 #### LDA
 El Análisis Discriminante Lineal (LDA) es un método supervisado que busca combinaciones lineales de las variables que maximizan la separación entre clases, permitiendo reducir la dimensionalidad y clasificar nuevas observaciones de forma eficiente.
 
+Entre las principales ventajas que tiene estan:
+- Si el número de observaciones es bajo y la distribución de los predictores es aproximadamente normal en cada una de las clases, el LDA es más estable que la regresión logística.
+- Si las clases están bien separadas, los parámetros estimados en el modelo de regresión logística son inestables. El método de LDA no sufre este problema.
+- Cuando se trata de un problema de clasificación con solo 2 niveles, ambos métodos suelen llegar a resultados similares.
+
 Creamos un dataset para LDA usando los genes escalados y la clase:
 ```{r}
 df_lda <- data.frame(
@@ -540,28 +553,22 @@ Entrenamos el modelo y predeccimos :
 ```{r}
 lda_model <- lda(class ~ ., data = train_df)
 lda_pred_train <- predict(lda_model, newdata = train_df)
-lda_pred_test <- predict(lda_model, newdata = test_df)
 ```
 Miramos la matriz de confusión:
 ```{r}
-confusion <- confusionMatrix(lda_pred_test$class, test_df$class)
-print(confusion)
+cm_lda <- confusionMatrix(lda_pred_test, test_df$class)
+
+# Matriz de confusión
+matriz_confusion <- cm_lda$table
+
+# Métricas 
+metricas <- cm_lda$byClass[, c("Precision", "Sensitivity", "Specificity", "F1")]
+metricas <- round(metricas, 3)
+
+matriz_confusion
+metricas
 ```
-Como se puede observar, la tabla muestra las métricas de rendimiento del modelo LDA evaluado sobre el conjunto de test, desglosadas por cada una de las clases (AGH, CFB, CGC, CHC y HPB):
-
-En términos generales, el modelo presenta un rendimiento excelente, con valores cercanos a 1 en prácticamente todas las métricas, lo que indica una alta capacidad discriminativa entre las distintas clases.
-
-La sensibilidad mide la capacidad del modelo para identificar correctamente las muestras de cada clase. Los resultados muestran una sensibilidad perfecta (1.000) para las clases AGH, CGC, CHC y HPB, mientras que para CFB es ligeramente inferior (0.9833), lo que indica que solo un pequeño número de muestras de esta clase fue mal clasificado.
-
-La especificidad evalúa la capacidad del modelo para rechazar correctamente las muestras que no pertenecen a una clase determinada. En este caso, todas las clases presentan valores muy cercanos a 1, lo que refleja que el modelo apenas confunde muestras de otras clases con la clase evaluada. La clase CHC presenta una especificidad ligeramente inferior (0.9924), aunque sigue siendo muy elevada.
-
-El valor predictivo positivo indica la proporción de predicciones correctas entre las muestras clasificadas como pertenecientes a una clase. Todos los valores son iguales a 1, excepto en CHC (0.9643), lo que sugiere que una pequeña fracción de las muestras predichas como CHC pertenecen en realidad a otra clase.
-
-El valor predictivo negativo es prácticamente perfecto para todas las clases, indicando que cuando el modelo descarta una clase, lo hace de forma correcta.
-
-La exactitud balanceada combina sensibilidad y especificidad, siendo especialmente útil en contextos con clases desbalanceadas. Los valores obtenidos son muy elevados, con exactitud perfecta para AGH, CGC y HPB, y ligeramente inferior para CFB (0.9917) y CHC (0.9962).
-
-Las métricas de prevalencia y tasa de detección reflejan la distribución desigual de las clases en el conjunto de datos, siendo CFB la clase más representada y HPB la menos frecuente. A pesar de este desbalance, el modelo mantiene un rendimiento elevado en todas las clases.
+El modelo LDA presenta un desempeño global sobresaliente, con valores de precisión, sensibilidad y especificidad iguales a 1.000 en la mayoría de las clases (AGH, CGC y HPB), lo que indica una clasificación perfecta sin falsos positivos ni falsos negativos. En la clase CFB, aunque la precisión y especificidad alcanzan el valor máximo (1.000), la sensibilidad desciende ligeramente a 0.983, reflejando una mínima pérdida en la detección de algunos casos reales. Por su parte, la clase CHC muestra una precisión de 0.964 y una especificidad de 0.992, manteniendo aun así una sensibilidad perfecta (1.000). A pesar de estas pequeñas variaciones, todos los valores F1-score son superiores a 0.98, lo que confirma un equilibrio excelente entre precisión y sensibilidad y evidencia la alta capacidad discriminante y robustez del modelo.
 
 Graficamos:
 ```{r}
